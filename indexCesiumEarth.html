@@ -134,7 +134,7 @@
    var layers = widget.imageryLayers;
    
    var glacierData = layers.addImageryProvider(new Cesium.SingleTileImageryProvider({
-		url: '../../images/V20162452016274.L3m_MO_SNPP_CHL_chlor_a_4km.nc.png'
+		url: '../../Images/V20162452016274.L3m_MO_SNPP_CHL_chlor_a_4km.nc.png'
 		}));
 
 	glacierData.alpha = 0.2;*/
@@ -237,7 +237,7 @@
 	var logoBillboed = viewer.entities.add({
 			position : Cesium.Cartesian3.fromDegrees(120.0,20.0),
 			billboard : {
-			image : '../../images/LOGO.png'
+			image : '../../Images/LOGO.png'
 			}
 	});*/
     //console.log(logoBillboed);
@@ -552,7 +552,7 @@
 	
 	    //Loading URL image
 		imageLayerChlorophyll = layers.addImageryProvider(new Cesium.SingleTileImageryProvider({
-			url: 'DB/images/Chlorophyll/' + nameSelect + '.png'
+			url: 'DB/Images/Chlorophyll/' + nameSelect + '.png'
 		}));
 		imageLayerChlorophyll.alpha = range.value;   
 		
@@ -564,7 +564,7 @@
 			context.globalAlpha=0.6;
 			context.drawImage(imageObj, 0, 0);
 		};
-		imageObj.src = 'DB/images/Chlorophyll/chrcolorbar.png';
+		imageObj.src = 'DB/Images/Chlorophyll/chrcolorbar.png';
 	}
 	function deleteChlorophyll(){
 		layers.remove(imageLayerChlorophyll);
@@ -584,7 +584,7 @@
 	
 	    //Loading URL image
 		imageLayerWaterTemperature = layers.addImageryProvider(new Cesium.SingleTileImageryProvider({
-			url: 'DB/images/WaterTemperature/' + nameSelect + '.png'
+			url: 'DB/Images/WaterTemperature/' + nameSelect + '.png'
 		}));
 		imageLayerWaterTemperature.alpha = range.value;   
 		
@@ -596,7 +596,7 @@
 			context.globalAlpha=0.6;
 			context.drawImage(imageObj, 0, 0);
 		};
-		imageObj.src = 'DB/images/WaterTemperature/sst-colorbar.png';
+		imageObj.src = 'DB/Images/WaterTemperature/sst-colorbar.png';
 		
 	}
 	function deleteWaterTemperature(){
@@ -613,7 +613,7 @@
 	//--------------Animation--------------
 	//Set Boat 
 	var scene = viewer.scene;
-	var modelMatrix = Cesium.Transforms.eastNorthUpToFixedFrame(Cesium.Cartesian3.fromDegrees(120, 20, 100.0));
+	var modelMatrix = Cesium.Transforms.eastNorthUpToFixedFrame(Cesium.Cartesian3.fromDegrees(120, 21, 100.0));
 		var model = scene.primitives.add(Cesium.Model.fromGltf({
 			url : 'DB/3DModel/3d-model.gltf',
 			modelMatrix : modelMatrix,
