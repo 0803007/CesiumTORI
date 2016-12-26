@@ -31,10 +31,17 @@
 		 position: absolute;
 		 top: 160px;
 		 left: 5px;
-
+		}
+		.loading-mask {
+			display: block;
+			position: absolute;
+			z-index: 9999;
+			top: 50%;
+		    left: 50%;
 		}
 
 	</style>
+	<div  class = "loading-mask" id="loadingIMG" style="display:none"><span style="font-size:3em;">Loading .....</span></div>
 	<div id="cesiumContainer"></div>
 	<div id="mousePosition">Loading...</div>
 	<div class="toolbar-left">
@@ -91,8 +98,6 @@
 		<canvas width="380" height="55" id="cv"></canvas><br>
 	</div>
 
-	<div id="loadingOverlay"><h1>Loading...</h1></div>
-
 </head>
 <body>
 
@@ -119,14 +124,15 @@
 		alert('Color: rgb(' + x[0] + ', ' + x[1] + ', ' + x[2] + ')');
 	};*/
 	
-
 	// Global Var
+	var block = null;
 	var entityLineClassing = null;
 	var entityBoat = null
 	var entityArrowToros = null;
 	var imageLayerChlorophyll = null;
 	var imageLayerWaterTemperature = null;
 	var bAutoRotation = true;
+	var cartographic = new Cesium.Cartographic();;
 
    /*
    var widget = new Cesium.CesiumWidget('cesiumContainer');
@@ -139,21 +145,35 @@
 
 	glacierData.alpha = 0.2;*/
 	
+	//Init Cesium
     var viewer = new Cesium.Viewer('cesiumContainer', { infoBox : true });
 	var pinBuilder = new Cesium.PinBuilder();
+	
 	viewer.scene.debugShowFramesPerSecond = true;
 	//viewer.scene.globe.enableLighting = true;
 	
-	//Use STK World Terrain
+	//Use STK World , will reduce FPS
+	/*
 	viewer.terrainProvider = new Cesium.CesiumTerrainProvider({
 		url : 'https://assets.agi.com/stk-terrain/world',
 		requestWaterMask : true,
 		requestVertexNormals : true
-	});
-   
-    var layers = viewer.scene.imageryLayers;
+	});*/
+    
+	var layers = viewer.scene.imageryLayers;
 	 
-	//default auto rotation
+	// Init ScreenSpaceEventHandler
+	var screenSpaceEventHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+	var cartesian = new Cesium.Cartesian3();
+	var rectangleCoordinates = new Cesium.Rectangle();
+	var scratchCartographic = new Cesium.Cartographic();
+	var center = new Cesium.Cartographic();
+	var firstPoint = new Cesium.Cartographic();
+	var firstPointSet = false;
+	var mouseDown = false;
+
+	
+	//Default auto rotation
 	spinGlobe( 0.0 );
 	function spinGlobe( dynamicRate ){
 		 var previousTime = Date.now();
@@ -179,7 +199,7 @@
 
 		if (cartesian) {
 		    bAutoRotation = false;
-			var cartographic = ellipsoid.cartesianToCartographic(cartesian);
+			cartographic = ellipsoid.cartesianToCartographic(cartesian);
 			var longitudeString = Cesium.Math.toDegrees(cartographic.longitude).toFixed(5);
 			var latitudeString = Cesium.Math.toDegrees(cartographic.latitude).toFixed(5);
 			
@@ -190,7 +210,76 @@
 		} else {
 			//entity.label.show = false;
 		}
+			
 	});
+	
+	//Disable some unneeded camera operations
+	viewer.scene.screenSpaceCameraController.enableTranslate = false;
+	//viewer.scene.screenSpaceCameraController.enableTilt = false;
+	viewer.scene.screenSpaceCameraController.enableLook = false;
+	//viewer.scene.screenSpaceCameraController.enableCollisionDetection = false;
+	
+	//Draw the selector while the user drags the mouse while holding shift
+	screenSpaceEventHandler.setInputAction(function drawSelector(movement) {
+			if (!mouseDown) {
+				return;
+			}
+
+			cartesian = viewer.camera.pickEllipsoid(movement.endPosition, viewer.scene.globe.ellipsoid, cartesian);
+
+			if (cartesian) {
+				//mouse cartographic
+				var tempCartographic = Cesium.Cartographic.fromCartesian(cartesian, Cesium.Ellipsoid.WGS84, tempCartographic);
+
+				if (!firstPointSet) {
+				  Cesium.Cartographic.clone(tempCartographic, firstPoint);
+				  firstPointSet = true;
+				}
+				else {
+				  rectangleCoordinates.east = Math.max(tempCartographic.longitude, firstPoint.longitude);
+				  rectangleCoordinates.west = Math.min(tempCartographic.longitude, firstPoint.longitude);
+				  rectangleCoordinates.north = Math.max(tempCartographic.latitude, firstPoint.latitude);
+				  rectangleCoordinates.south = Math.min(tempCartographic.latitude, firstPoint.latitude);
+				  selector.show = true;
+				}
+			}
+		}, Cesium.ScreenSpaceEventType.MOUSE_MOVE, Cesium.KeyboardEventModifier.SHIFT);
+
+		var getSelectorLocation = new Cesium.CallbackProperty(function getSelectorLocation(time, result) {
+		return Cesium.Rectangle.clone(rectangleCoordinates, result);
+	}, false);
+
+	screenSpaceEventHandler.setInputAction(function startClickShift() {
+		mouseDown = true;
+		selector.rectangle.coordinates = getSelectorLocation;
+	}, Cesium.ScreenSpaceEventType.LEFT_DOWN, Cesium.KeyboardEventModifier.SHIFT);
+
+	screenSpaceEventHandler.setInputAction(function endClickShift() {
+		mouseDown = false;
+		firstPointSet = false;
+		selector.rectangle.coordinates = rectangleCoordinates;
+	}, Cesium.ScreenSpaceEventType.LEFT_UP, Cesium.KeyboardEventModifier.SHIFT);
+
+
+	//Hide the selector by clicking anywhere
+	screenSpaceEventHandler.setInputAction(function hideSelector() {
+		selector.show = false;
+	}, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+	selector = viewer.entities.add({
+		selectable: false,
+		show: false,
+		rectangle: {
+			fill : false,
+			outline : true,
+			outlineColor : Cesium.Color.WHITE,
+			outlineWidth : 4,
+			stRotation : Cesium.Math.toRadians(45),
+			coordinates: getSelectorLocation
+			//material: Cesium.Color.RED.withAlpha(0.5)
+		}
+	});
+	
 	//Get & Show Double Click
 	viewer.scene.canvas.addEventListener('dblclick', function (e) {
 
@@ -273,6 +362,7 @@
 		$.ajax({
 			url: "DB/CruiseDB/getData.php",
 			data: "&tname="+str,
+			global: true,
 			type:"POST",
 			dataType:"JSON",
 
@@ -392,6 +482,9 @@
 						interpolationAlgorithm : Cesium.LagrangePolynomialApproximation 
 				});
 
+				//if (document.readyState=="complete")
+				//	alert('Good');
+				
 				/*
 				console.log(path3D);
 				var orientation = new Cesium.VelocityOrientationProperty(path3D,true);
@@ -424,14 +517,19 @@
 						}
 				}];
 				var promise = viewer.dataSources.add(Cesium.CzmlDataSource.load(czml));*/
-			
-			},
 
+			},
+			beforeSend:function(){
+                $('#loadingIMG').show();
+			},
+			complete:function(){
+				$('#loadingIMG').hide();
+			},
 			error:   function(jqXHR, textStatus, errorThrown){ 
 				//document.getElementById("message").innerHTML=errorThrown; 
 			}
+
 		});
-		
 	
 	}
 	
@@ -519,8 +617,8 @@
 																			   (x+u/300), (y+v/300), 10]),
 						width : 5,
 						followSurface : false,
-						material : new Cesium.PolylineArrowMaterialProperty(new Cesium.Color(V/100,1-V/100,0,1))
-						//material : new Cesium.PolylineArrowMaterialProperty(Cesium.Color.RED)
+						//material : new Cesium.PolylineArrowMaterialProperty(new Cesium.Color(V/100,1-V/100,0,1))
+						material : new Cesium.PolylineArrowMaterialProperty(Cesium.Color.RED)
 					}
 				});
 			}
@@ -609,7 +707,7 @@
 		context.clearRect(0, 0, canvas.width, canvas.height);
 		
 	}
-	
+
 	//--------------Animation--------------
 	//Set Boat 
 	var scene = viewer.scene;
