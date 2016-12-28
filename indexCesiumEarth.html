@@ -17,8 +17,7 @@
 		@import url(Apps/Sandcastle/templates/bucket.css);
 		@import url(Build/Cesium/Widgets/widgets.css);
 		html, body, #cesiumContainer {
-		  width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
-			  
+		  width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;  
 		}
 		.toolbar-left {
 		 display: block;
@@ -57,20 +56,31 @@
 			<option>KM</option>
 			<option>MV</option>
 		</select>
-			<select id="claassing" onchange="">
+		<select id="claassing" onchange="">
 				<option>請選擇航次</option>
 		</select>
-		<button onclick="showClassing(document.getElementById('claassing').value)">讀取船次</button>
+		<button onclick="showClassingFromSQL(document.getElementById('claassing').value)">讀取船次</button>
 		<button onclick="deleteLine()">刪掉船次</button>
 		<button onclick="loadClassingJSON()" style="visibility:hidden">讀取JSON船次(測試按鈕)</button><br>
 		
-		<select id="toros" >
-			<option>請選擇時間</option>
-			<option>RR</option>
-			<option>OR1</option>
-			<option>OR2</option>
+		<select id="torosMonth" onchange="showTorosDateFromSQL()">
+			<option>請選擇月</option>
+			<option>201611</option>
+			<option>201610</option>
+			<option>201609</option>
+			<option>201608</option>
+			<option>201607</option>
+			<option>201606</option>
+			<option>201605</option>
+			<option>201604</option>
+			<option>201603</option>
+			<option>201602</option>
+			<option>201601</option>
 		</select>
-		<button onclick="loadTorosJSON()">讀取TOROS</button>
+		<select id="torosDate" onchange="">
+			<option>請選擇日</option>
+		</select>
+		<button onclick="loadTorosJSONFromSQL()">讀取TOROS</button>
 		<button onclick="deleteToros()">刪除TOROS</button><br>
 		<select id="chlorophyll" >
 			<option>請選擇時間</option>
@@ -330,7 +340,30 @@
 			}
 	});*/
     //console.log(logoBillboed);
-	
+	function showTorosDateFromSQL(){
+		$.ajax({
+				url: "DB/TOROS/getDate.php",
+				data: "month=" + document.getElementById('torosMonth').value,
+				type:"POST",
+				dataType:"JSON",
+
+				success: function(data){
+				    // Clear option
+					torosDate.options.length = 1;
+					//Add soption
+					var len = data.length;
+					console.log(data[0]);
+					
+					for (i=0;i<len;i=i+1 ){
+						torosDate.options[i+1] = new Option(data[i],data[i]);
+					}
+				},
+
+				error:   function(jqXHR, textStatus, errorThrown){ 
+					//document.getElementById("message").innerHTML=errorThrown; 
+				}
+			});
+	}	
 
 	function showTyping(str){
 		$.ajax({
@@ -353,11 +386,11 @@
 				},
 
 				error:   function(jqXHR, textStatus, errorThrown){ 
-					//document.getElementById("message").innerHTML=errorThrown; 
+					document.getElementById("message").innerHTML=errorThrown; 
 				}
 			});
 	}
-	function showClassing(str){
+	function showClassingFromSQL(str){
 		//console.log(str);
 		$.ajax({
 			url: "DB/CruiseDB/getData.php",
@@ -635,6 +668,58 @@
 		}).otherwise(function(error) {
 			// an error occurred
 		});
+	}
+	function loadTorosJSONFromSQL() {
+		month = document.getElementById('torosMonth').value;
+		date = document.getElementById('torosDate').value;
+		console.log(month);
+		console.log(date);
+			$.ajax({
+				url: "DB/TOROS/getArrow.php",
+				data:"month="+ month + "&date=" + date,
+				type:"POST",
+				dataType:"JSON",
+
+				success: function(data){
+					if (entityArrowToros != null)
+						viewer.entities.removeAll();
+						
+					//Add soption
+					var len = data.length;
+					console.log(len);
+					console.log(data[0]);
+					
+					for (i=0;i<len;i++){
+						var x,y;
+						var u,v;
+						x = data[i].Longitude;
+						y = data[i].Latitude;
+						u = data[i].Ucomp;
+						v = data[i].Vcomp;
+						V = data[i].Velocity;
+				        
+						entityArrowToros = viewer.entities.add({
+							name : 'Red straight arrow at height',
+							polyline : {
+								positions : Cesium.Cartesian3.fromDegreesArrayHeights([x, y, 10,
+																					   (x-(u/500.000)), (y-(v/500.000)), 10]),
+								width : 5,
+								followSurface : false,
+								material : new Cesium.PolylineArrowMaterialProperty(new Cesium.Color(V/100,1-V/100,0,1))
+								//material : new Cesium.PolylineArrowMaterialProperty(Cesium.Color.RED)
+							}
+						});
+						//if (i == 10)
+						//	break;
+					}
+					viewer.flyTo(viewer.entities);
+				},
+
+				error: function(jqXHR, textStatus, errorThrown){ 
+					//document.getElementById("message").innerHTML=errorThrown; 
+				}
+			});
+	
 	}
 	function deleteToros() {
 	    viewer.entities.entityArrowToros;

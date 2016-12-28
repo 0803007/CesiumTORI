@@ -1,18 +1,22 @@
 <?php
-	//INPUT:船次的資料夾路徑
-	//PROCSEE:搜尋資料夾所有的檔案 由主檔名建立資料庫的Table,在寫入檔案格式至資料庫
+	//INPUT:手動寫入月份
+	//PROCSEE:將資料夾內的檔案寫入同一個table
 	//OUTPUT:無
 
 	header("Content-Type:text/html; charset=UTF-8");
 	
-	require_once("../DB_config.php");
-    require_once("../DB_class.php");
+	require_once("DB_config.php");
+    require_once("DB_class.php");
 	
 	//設定PHP執行時間限制
 	set_time_limit(0);
 	
+	//設定table name
+	$name = "201601";
+	$tname = "toros_$name";
+	
 	//取得檔案路徑
-	$path = "G:\\海洋工作\\資料庫\\DATA\\航次\\CruiseDB\\nav\\OR1\\*.nav";
+	$path = "G:\\海洋工作\\資料庫\\DATA\\TOROS\\$name\\*.tuv";
 	$path =  iconv('UTF-8','Big5', $path);
 	$filepathList = glob($path);
 	
@@ -20,51 +24,65 @@
 	$db = new DB();
     $db->connect_db($_DB['host'], $_DB['username'], $_DB['password'], $_DB['dbname']);
 	
+	//用船的代號建立資料表
+	$sqlstr="create table IF NOT EXISTS $tname(ID int NOT NULL AUTO_INCREMENT PRIMARY KEY, Datetime datetime, Longitude float, Latitude float, Ucomp float, Vcomp float, Velocity float, INDEX (datetime))";
+	$db->query($sqlstr);
+	echo "資料表建立成功";	
+	
 	//for loop所有sub file
 	$len = count($filepathList); 
 	echo $len;
-	for($i=0 ; $i<$len ; $i=$i+1){
-		//去除完整路徑
-		$filepath = basename($filepathList[$i]);
-		$tname = substr($filepath,0,-4);//去除副檔名	
-		$tname = str_replace("-","_",$tname);//取代減號
-		echo $tname;
-
-		//建立資料表
-		//$sqlstr="use $dbname";
-		//$db->query($sqlstr);
-		$sqlstr="create table IF NOT EXISTS $tname(ID int, Longitude float, Latitude float, Date int, Time int, Voyage char(12))";
-		$db->query($sqlstr);
-		echo "資料表建立成功";
-		
+	for($i=0 ; $i<$len ; $i=$i+1){		
 		//Insert Data
 		$path =  $filepathList[$i];
+		echo $path;
 		//echo $path;
 		$db->query("SET NAMES utf8");
-		$sqlStr="insert into $tname(ID,Longitude,Latitude,Date,Time,Voyage) values";
+		$sqlStr="insert into $tname(Datetime, Longitude, Latitude, Ucomp, Vcomp , Velocity) values";
         
 		$file = fopen($path, "r");
-		$count = 0;
-		// Read the file line by line until the end
-		while (($data = fgetcsv($file, 1000, " ")) !== FALSE){
-				$Longitude = $data[0];
-				$Latitude = $data[1];
-				$Date = $data[2];
-				$Time = $data[3];
-				$Voyage = $data[4];
-				//echo $Longitude . "<br />" . $Voyage . "<br />\n" ;
-
-				//insert to DB
-				$sqlStr.=" ($count,$Longitude,$Latitude ,$Date,$Time,'$Voyage'),";
-				$count = $count + 1;
-				//if ($count >1000)
-				//   break;
-		}
-		$sqlStr = substr($sqlStr,0,-1);  //delete last char
-		//echo $sqlStr;
-		$db->query($sqlStr);
-		echo " insertDB Successfully!<br>  ";
 		
+		$count = -1;
+		$datetime = "2000-10-01 00:00:00";
+		// Read the file line by line until the end
+		//while (($data = fgets($file, 1000)) !== FALSE){
+		while (($data = fgets($file)) !== false){
+			$count = $count + 1;
+			if ($count==6){
+				$data = trim($data);    //delete first space  &end space
+				$data = preg_replace("/\s(?=\s)/","\\1",$data);  /// 移除非空白的間距變成一般的空白
+				$dataArray = explode(" ", $data);
+				
+				$datetime = "$dataArray[1]-$dataArray[2]-$dataArray[3] $dataArray[4]:$dataArray[5]:$dataArray[6]";
+			}
+			if (substr($data , 0, 1) == "%"){
+				continue;
+			}
+			$data = trim($data);    //delete first space  &end space
+			$data = preg_replace("/\s(?=\s)/","\\1",$data);  //// 移除非空白的間距變成一般的空白
+			$dataArray = explode(" ", $data);
+			//echo $dataArray[0];
+			$Longitude = $dataArray[0];
+			$Latitude = $dataArray[1];
+			$Ucomp = $dataArray[2];
+			$Vcomp = $dataArray[3];
+			$Velocity = $dataArray[12];
+			//echo $Longitude . "<br />" . $Voyage . "<br />\n" ;
+
+			//insert to DB
+			//$sqlStr.=" ('2016-11-01 00:00:00', $Longitude, $Latitude, $Ucomp, $Vcomp, $Velocity),";
+			$sqlStr.=" ('$datetime', $Longitude, $Latitude, $Ucomp, $Vcomp, $Velocity),";
+		}
+		//判斷檔案是否是空 決定是否寫入SQL
+		if ($count > 26) {
+			$sqlStr = substr($sqlStr,0,-1);  //delete last char
+			//echo $sqlStr;
+			$db->query($sqlStr);
+			echo "Successfu!<br>";
+		}else{
+			echo "Empty Eile!<br>";
+		}
+		// Close the file that no longer in use
 		fclose($file);
 	}
 	echo "OVER!!!<br>  ";

@@ -4,10 +4,10 @@
 	//OUTPUT:無
 	header("Content-Type:text/html; charset=utf-8");
 
-	$dbname = "TOROS";
-	$tname = "TOTL_TORO_2016_11_01_0000";
+	$dbname = "smallsun_toros";
+	$tname = "toros_201611";
 
-	$link=mysql_connect("localhost","root","711113") or die("連接失敗");
+	$link=mysql_connect("10.110.21.71","smallsun","711113") or die("連接失敗");
 
 	//刪除舊資料庫
 	//if (mysql_query("DROP DATABASE IF EXISTS $dbname"))
@@ -23,7 +23,7 @@
 
 	$sqlstr="use $dbname";
 	mysql_query($sqlstr);
-	$sqlstr="create table $tname(ID int, Datetime datetime, Longitude float, Latitude float, Ucomp float, Vcomp float, Velocity float)";
+	$sqlstr="create table $tname(ID int NOT NULL AUTO_INCREMENT PRIMARY KEY, Datetime datetime, Longitude float, Latitude float, Ucomp float, Vcomp float, Velocity float, INDEX (datetime))";
 	mysql_query($sqlstr) or die("資料表建立失敗");
 	echo "資料表建立成功<br>";
 
