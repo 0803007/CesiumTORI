@@ -12,7 +12,7 @@
 	set_time_limit(0);
 	
 	//設定table name
-	$name = "201601";
+	$name = "201508";
 	$tname = "toros_$name";
 	
 	//取得檔案路徑
