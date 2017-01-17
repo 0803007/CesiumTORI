@@ -1,6 +1,7 @@
- <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"> 
+<!DOCTYPE html> 
 <html lang="en">
 <head>
+	<link href="DB/Images/favicon.ico" rel="SHORTCUT ICON" id="css">
 	<!-- Use correct character set. -->
 	<meta charset="utf-8">
 	<!-- Tell IE to use the latest, best version. -->
@@ -10,7 +11,10 @@
 	<title>ToriMIS</title>
 	<script src="https://d3js.org/d3.v4.min.js"></script>
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+	<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>  <!--這包很大,未來要下載回來  -->
 	<!-- <script src="../../js/ajax_select.js" type="text/javascript" ></script> -->
+	<script src="https://code.highcharts.com/highcharts.js"></script>
+	<script src="https://code.highcharts.com/modules/exporting.js"></script>
 	<script src="Build/Cesium/Cesium.js"></script>
 	<script src="../js/WebGLGlobeDataSource.js"></script>
 	<style>
@@ -34,17 +38,33 @@
 		.loading-mask {
 			display: block;
 			position: absolute;
-			z-index: 9999;
+			z-index: 2;
 			top: 50%;
-		    left: 50%;
+		    left: 45%;
 		}
+		.logo {	
+			position: absolute;
+			z-index: 2;
+			bottom: 7%;
+			right: 3%;
+		}
+		.ui-datepicker {
+		   background: #333;
+		   border: 1px solid #555;
+		   color: #EEE;
+		 }
 
 	</style>
-	<div  class = "loading-mask" id="loadingIMG" style="display:none"><span style="font-size:3em;">Loading .....</span></div>
+	<div class = "loading-mask" id="loadingIMG" style="display:none"><span style="font-size:3em;">Loading .....</span></div>
 	<div id="cesiumContainer"></div>
 	<div id="mousePosition">Loading...</div>
 	<div class="toolbar-left">
 		<p id="textPosition">世界座標</p> 
+		<input type="checkbox" id="cbox1" value="second_checkbox" onchange="showRotation(this.checked)" checked = "true"> <label>Rotation</label>  
+		<input type="checkbox" id="cbox2" value="second_checkbox" onchange="showLogo(this.checked)" checked = "true"> <label>Logo</label>  
+		<input type="checkbox" id="cbox3" value="second_checkbox" onchange="showTerrain(this.checked)" > <label>Terrain</label> 
+		<input type="checkbox" id="cbox4" value="second_checkbox" onchange="showLight(this.checked)" checked = "true"> <label>Sun</label> 
+		<input type="checkbox" id="cbox5" value="second_checkbox" onchange="showTOROSStation(this.checked)" checked = "true" > <label>TOROS Station</label><br>
 		<select id="typing" onchange="showTyping(this.value)">
 			<option>請選擇船種</option>
 			<option>RR</option>
@@ -76,6 +96,18 @@
 			<option>201603</option>
 			<option>201602</option>
 			<option>201601</option>
+			<option>201512</option>
+			<option>201511</option>
+			<option>201510</option>
+			<option>201509</option>
+			<option>201508</option>
+			<option>201507</option>
+			<option>201506</option>
+			<option>201505</option>
+			<option>201504</option>
+			<option>201503</option>
+			<option>201502</option>
+			<option>201501</option>
 		</select>
 		<select id="torosDate" onchange="">
 			<option>請選擇日</option>
@@ -107,7 +139,27 @@
 	<div class="colorbar" >
 		<canvas width="380" height="55" id="cv"></canvas><br>
 	</div>
-
+	<div class="logo" >
+		<!-- <canvas width="380" height="55" id="logo"></canvas> -->
+		  
+		<a href="http://www.tori.org.tw/"><img id="logo1" src="DB/Images/foot_logo.png"></a>
+		<a href="http://www.tori.org.tw/"><img id="logo2" src="DB/Images/LOGO.png"></a>
+	</div>
+	<div id="dialog" title="Basic dialog" >
+	   
+	    Date:<input type="text" id="datepicker">
+		Select a speed:
+		<select name="speed" id="selectWeather">		
+		  <option selected="selected">Temperature</option>
+		  <option>Humidity</option>
+		  <option>Pressure</option>
+		</select>
+		<button class="ui-button ui-widget ui-corner-all" onclick="showWeatherFromSQL()">SET</button><br>
+		<div id="highcharts" title="Basic dialog" ><br>
+		<p>This is the default dialog which is useful for displaying information. The dialog window can be moved, resized and closed with the 'x' icon.</p>
+		
+	</div>
+	<!-- <div id="container" style="min-width: 610px; height: 800px; margin: 0 auto"></div> -->
 </head>
 <body>
 
@@ -134,44 +186,57 @@
 		alert('Color: rgb(' + x[0] + ', ' + x[1] + ', ' + x[2] + ')');
 	};*/
 	
+
 	// Global Var
 	var block = null;
 	var entityLineClassing = null;
 	var entityBoat = null
-	var entityArrowToros = null;
+	var entityArrowToros = []; //array
 	var imageLayerChlorophyll = null;
 	var imageLayerWaterTemperature = null;
 	var bAutoRotation = true;
 	var cartographic = new Cesium.Cartographic();;
-
-   /*
-   var widget = new Cesium.CesiumWidget('cesiumContainer');
-   viewer.scene.debugShowFramesPerSecond = true;
-   var layers = widget.imageryLayers;
+	var modelBoat = null;   //test Model
+	var bluePin1 = null;
+	var bluePin2 = null;
+	var bluePin3 = null;
+	var bluePin4 = null;
    
-   var glacierData = layers.addImageryProvider(new Cesium.SingleTileImageryProvider({
+	/*var widget = new Cesium.CesiumWidget('cesiumContainer');
+	viewer.scene.debugShowFramesPerSecond = true;
+	var layers = widget.imageryLayers;
+	
+	var glacierData = layers.addImageryProvider(new Cesium.SingleTileImageryProvider({
 		url: '../../Images/V20162452016274.L3m_MO_SNPP_CHL_chlor_a_4km.nc.png'
 		}));
 
 	glacierData.alpha = 0.2;*/
 	
-	//Init Cesium
+	//Init Cesium	
+	Cesium.BingMapsApi.defaultKey = "y10PwCCQ3kETfTfZrpia~WuBQuZSyqg3XTS3LFnjonw~AsJ0CEBEcA2bth5UvagyEvpWaC1Ww71fVt26OaFrWlS7ZSzrnkgBOUFmA1hVweMG";//license
     var viewer = new Cesium.Viewer('cesiumContainer', { infoBox : true });
 	var pinBuilder = new Cesium.PinBuilder();
+	var layers = viewer.scene.imageryLayers;
 	
+	//set iframe
+	viewer.infoBox.frame.sandbox = "allow-same-origin allow-top-navigation allow-pointer-lock allow-popups allow-forms allow-scripts";
+	
+	//init sun light
 	viewer.scene.debugShowFramesPerSecond = true;
 	viewer.scene.globe.enableLighting = true;
+	viewer.scene.sun.glowFactor = 10; 
+	
+	//var credit = new Cesium.Credit('Title', 'favicon.ico', 'http://www.cesiumjs.org');
+	//viewer.scene.frameState.creditDisplay.addDefaultCredit(credit)
 	
 	//Use STK World , will reduce FPS
-	
+	/*
 	viewer.terrainProvider = new Cesium.CesiumTerrainProvider({
 		url : 'https://assets.agi.com/stk-terrain/world',
 		requestWaterMask : true,
 		requestVertexNormals : true
-	});
-    
-	var layers = viewer.scene.imageryLayers;
-	 
+	});*/
+	
 	// Init ScreenSpaceEventHandler
 	var screenSpaceEventHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
 	var cartesian = new Cesium.Cartesian3();
@@ -182,9 +247,8 @@
 	var firstPointSet = false;
 	var mouseDown = false;
 
-	
 	//Default auto rotation
-	spinGlobe( 0.0 );
+	spinGlobe( 0.2  ); //default 
 	function spinGlobe( dynamicRate ){
 		 var previousTime = Date.now();
 
@@ -197,11 +261,60 @@
 				viewer.scene.camera.rotate(Cesium.Cartesian3.UNIT_Z, -spinRate * delta);
 			}
 		});
-	 }
+	}
+	
+	function showRotation(checked){
+		bAutoRotation = checked;
+	}
+	
+	function showLogo(checked){
+		if (checked){
+			document.getElementById('logo1').style = "display:visible";
+			document.getElementById('logo2').style = "display:visible";	
+			
+			document.getElementsByClassName("cesium-widget-credits")[0].style = "display:visible";
+								
+		}else{
+			document.getElementById('logo1').style = "display:none";
+			document.getElementById('logo2').style = "display:none";
+			
+			document.getElementsByClassName("cesium-widget-credits")[0].style = "display:none";
+		}
+	}
+	
+	function showTerrain(checked){
+		if (checked){
+			viewer.terrainProvider = new Cesium.CesiumTerrainProvider({
+				url : 'https://assets.agi.com/stk-terrain/world',
+				requestWaterMask : true,
+				requestVertexNormals : true
+			});
+		}else{
+			viewer.terrainProvider =  new Cesium.EllipsoidTerrainProvider({});
+
+		}
+	}
+	
+	function showLight(checked){
+		viewer.scene.globe.enableLighting = checked;
+	}
+	
+	function showTOROSStation(check){
+		if (check ){
+			bluePin1.show = true;
+			bluePin2.show = true;
+			bluePin3.show = true;
+			bluePin4.show = true;
+		}else{
+			bluePin1.show = false;
+			bluePin2.show = false;
+			bluePin3.show = false;
+			bluePin4.show = false;
+		}
+	}
 	
 	//Get & Show Mouse Position
 	viewer.scene.canvas.addEventListener('mousemove', function (e) {
-
 		//var entity = viewer.entities.getById('alo');
 		var ellipsoid = viewer.scene.globe.ellipsoid;
 		// Mouse over the globe to see the cartographic position
@@ -224,7 +337,7 @@
 	});
 	
 	//Disable some unneeded camera operations
-	viewer.scene.screenSpaceCameraController.enableTranslate = false;
+	//viewer.scene.screenSpaceCameraController.enableTranslate = false;
 	//viewer.scene.screenSpaceCameraController.enableTilt = false;
 	viewer.scene.screenSpaceCameraController.enableLook = false;
 	//viewer.scene.screenSpaceCameraController.enableCollisionDetection = false;
@@ -269,12 +382,12 @@
 		firstPointSet = false;
 		selector.rectangle.coordinates = rectangleCoordinates;
 	}, Cesium.ScreenSpaceEventType.LEFT_UP, Cesium.KeyboardEventModifier.SHIFT);
-
-
+	
 	//Hide the selector by clicking anywhere
 	screenSpaceEventHandler.setInputAction(function hideSelector() {
 		selector.show = false;
 	}, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+	
 
 	selector = viewer.entities.add({
 		selectable: false,
@@ -292,7 +405,6 @@
 	
 	//Get & Show Double Click
 	viewer.scene.canvas.addEventListener('dblclick', function (e) {
-
 		//var entity = viewer.entities.getById('alo');
 		var ellipsoid = viewer.scene.globe.ellipsoid;
 		// Mouse over the globe to see the cartographic position
@@ -309,7 +421,7 @@
 				name : 'Question mark',
 				position : Cesium.Cartesian3.fromDegrees(longitudeString, latitudeString),
 				billboard : {
-					image : pinBuilder.fromText('?', Cesium.Color.BLACK, 48).toDataURL(),
+					image : pinBuilder.fromText('??', Cesium.Color.BLACK, 48).toDataURL(),
 					verticalOrigin : Cesium.VerticalOrigin.BOTTOM
 				}
 			});
@@ -401,7 +513,8 @@
 
 			success: function(data){
 			    if (entityLineClassing != null)
-					viewer.entities.remove(entityLineClassing);
+					deleteLine();
+					//viewer.entities.remove(entityLineClassing);
 				
 				//console.log(d);
 				console.log(data);
@@ -423,7 +536,7 @@
 					polyline : {
 						positions : Cesium.Cartesian3.fromDegreesArray(path),
 						width : 1,
-						material : Cesium.Color.RED
+						material : Cesium.Color.GREEN
 				}});
 
 				viewer.flyTo(entityLineClassing);
@@ -438,7 +551,7 @@
 				var len = data.length;
 				for (i=0;i<len;i++ ){
 					var time = new Cesium.JulianDate.addSeconds(start, i*1, new Cesium.JulianDate());
-					var position = new Cesium.Cartesian3.fromDegrees(data[i].Longitude,data[i].Latitude, 10);
+					var position = new Cesium.Cartesian3.fromDegrees(data[i].Longitude,data[i].Latitude, 1);
 					positions.addSample(time, position);	
 					
 					//console.log(data[i].Longitude);
@@ -460,8 +573,7 @@
 							
 						position = new Cesium.Cartesian3.fromDegrees(count,count2,10);
 						positionsSmooth.addSample(time, position);	
-					}
-					
+					}		
 				}
 		
 				//Make sure viewer is at the desired time.
@@ -494,8 +606,8 @@
 					//Load the Cesium plane model to represent the entity
 					model : {
 						uri : "DB/3DModel/3d-model.gltf",
-						scale : 500.0,
-						minimumPixelSize : 64
+						scale : 5.0,
+						minimumPixelSize : 128
 					}
 					/*
 					//Show the path as a pink line sampled in 1 second increments.
@@ -550,7 +662,6 @@
 						}
 				}];
 				var promise = viewer.dataSources.add(Cesium.CzmlDataSource.load(czml));*/
-
 			},
 			beforeSend:function(){
                 $('#loadingIMG').show();
@@ -565,10 +676,88 @@
 		});
 	
 	}
+	$(function() {
+			$( "#datepicker" ).datepicker({ dateFormat: 'yymm',defaultDate: new Date(2016, 12, 01) });
+	});
+	function showWeatherFromSQL(){		
+		var weather = document.getElementById('selectWeather').value;
+		var date = document.getElementById('datepicker').value;
+		var pos = "NAWN";
+		console.log(weather);
+		console.log(date);
+
+		$.ajax({
+			url: "DB/WeatherStation/getWeather.php",
+			data:"weather="+ weather + "&date=" + date + "&pos=" + pos,
+			type:"POST",
+			dataType:"JSON",
+
+			success: function(data){
+				//Add soption
+				var len = data.length;
+				//Add Line
+				var array = [];
+				var len = data.length;
+				
+				//var cook = {"type": "LineString", "coordinates": [[120,22]] };
+				for (i=0;i<len;i=i+1 ){
+					//var c = [json[i].Latitude , json[i].Longitude];
+					//cook.coordinates.push(c);
+					array.push(parseFloat(data[i].key));	
+				}
+				setCharts(pos,array,weather);
+			},
+
+			error:   function(jqXHR, textStatus, errorThrown){ 
+				alert("No Data");
+				console.log("error");
+			}
+		});
+	}
+	function setCharts(pos,data,weather){
+		Highcharts.chart('highcharts', {
+
+			title: {
+				text: pos,
+				x: -20 //center
+			},
+			subtitle: {
+				text: 'Source: WorldClimate.com',
+				x: -20
+			},
+			xAxis: {
+				categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+					'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+			},
+			yAxis: {
+				title: {
+					text: weather
+				},
+				plotLines: [{
+					value: 0,
+					width: 1,
+					color: '#808080'
+				}]
+			},
+			tooltip: {
+				valueSuffix: '°C'
+			},
+			legend: {
+				layout: 'vertical',
+				align: 'right',
+				verticalAlign: 'middle',
+				borderWidth: 0
+			},
+			series: [{
+				name: pos,
+					data: data
+				}]
+		});
+	}
 	
 	function deleteLine() {
 		viewer.entities.remove(entityLineClassing);
-		viewer.entities.removeAll();
+		viewer.entities.remove(entityBoat);
 		
 		entityLineClassing = null;
 	}
@@ -582,7 +771,7 @@
 			var len = json.length;
 			console.log(len);
 			//var cook = {"type": "LineString", "coordinates": [[120,22]] };
-			for (i=0;i<len;i=i+1 ){
+			for (i=0;i<len;i=i+1){
 				//var c = [json[i].Latitude , json[i].Longitude];
 				//cook.coordinates.push(c);
 				test.push(json[i].Latitude);
@@ -628,8 +817,8 @@
 	function loadTorosJSON() {
 		Cesium.loadJson('../data/toros.json').then(function(jsonData) {
 		   
-			if (entityArrowToros != null)
-				viewer.entities.removeAll();
+			if (entityArrowToros.length != 0)
+				deleteToros();
 			
 			// Do something with the JSON object
 			var len = jsonData.length;
@@ -643,7 +832,7 @@
 				v = jsonData[i].Vcomp;
 				V = jsonData[i].Velocity
 			
-				entityArrowToros = viewer.entities.add({
+				var arrowToros = viewer.entities.add({
 					name : 'Red straight arrow at height',
 					polyline : {
 						positions : Cesium.Cartesian3.fromDegreesArrayHeights([x, y, 10,
@@ -654,6 +843,7 @@
 						material : new Cesium.PolylineArrowMaterialProperty(Cesium.Color.RED)
 					}
 				});
+				entityArrowToros.push(arrowToros);
 			}
 			/*
 			//any JSON data formatted for WebGL Globe.
@@ -681,8 +871,8 @@
 				dataType:"JSON",
 
 				success: function(data){
-					if (entityArrowToros != null)
-						viewer.entities.removeAll();
+					if (entityArrowToros.length != 0)
+						deleteToros();
 						
 					//Add soption
 					var len = data.length;
@@ -698,33 +888,47 @@
 						v = data[i].Vcomp;
 						V = data[i].Velocity;
 				        
-						entityArrowToros = viewer.entities.add({
+						var arrowToros = viewer.entities.add({
 							name : 'Red straight arrow at height',
 							polyline : {
 								positions : Cesium.Cartesian3.fromDegreesArrayHeights([(x-(u/500.000)), (y-(v/500.000)),10   //Some Problem
 																						,x, y, 10]),
 								width : 5,
 								followSurface : false,
-								material : new Cesium.PolylineArrowMaterialProperty(new Cesium.Color(V/100,1-V/100,0,1))
-								//material : new Cesium.PolylineArrowMaterialProperty(Cesium.Color.RED)
+								//material : new Cesium.PolylineArrowMaterialProperty(new Cesium.Color(V/100,1-V/100,0,1))
+								material : new Cesium.PolylineArrowMaterialProperty(Cesium.Color.RED)
 							}
 						});
+						entityArrowToros.push(arrowToros);
 						//if (i == 10)
 						//	break;
 					}
 					viewer.flyTo(viewer.entities);
 				},
-
+				beforeSend:function(){
+					$('#loadingIMG').show();
+				},
+				complete:function(){
+					$('#loadingIMG').hide();
+				},
 				error: function(jqXHR, textStatus, errorThrown){ 
 					//document.getElementById("message").innerHTML=errorThrown; 
 				}
+				
 			});
 	
 	}
-	function deleteToros() {
-	    viewer.entities.entityArrowToros;
-		viewer.entities.removeAll();
-		entityArrowToros = null
+	function deleteToros() {	
+		if (entityArrowToros.length == 0)
+			return;
+			
+	    for (var i=0;i<entityArrowToros.length;i++){
+			viewer.entities.remove(entityArrowToros[i]);
+		}
+			
+		entityArrowToros = [];
+		//viewer.entities.removeAll();
+		//entityArrowToros = null
 	}
 	function loadChlorophyll(){
 	    if (imageLayerWaterTemperature!=null)
@@ -792,16 +996,15 @@
 		context.clearRect(0, 0, canvas.width, canvas.height);
 		
 	}
-
+	
 	//--------------Animation--------------
 	//Set Boat 
-	var scene = viewer.scene;
 	var modelMatrix = Cesium.Transforms.eastNorthUpToFixedFrame(Cesium.Cartesian3.fromDegrees(120, 21, 100.0));
-		var model = scene.primitives.add(Cesium.Model.fromGltf({
-			url : 'DB/3DModel/3d-model.gltf',
-			modelMatrix : modelMatrix,
-			scale : 10000.0
-		}));
+	modelBoat = viewer.scene.primitives.add(Cesium.Model.fromGltf({
+		url : 'DB/3DModel/3d-model.gltf',
+		modelMatrix : modelMatrix,
+		scale : 10000.0
+	}));
 		
 
 /*
@@ -830,7 +1033,112 @@
 		}
 	});*/
 
+	//Weather Station
+	bluePin1 = viewer.entities.add({
+	    name: '大潭DATN',
+		description: '<iframe width="854" height="480" src="https://www.youtube.com/embed/7CKOG-qQKJY" frameborder="0" allowfullscreen></iframe>',
+		position : Cesium.Cartesian3.fromDegrees(121.050035, 25.029934),
+		billboard : {
+			image : pinBuilder.fromColor(Cesium.Color.ROYALBLUE, 48).toDataURL(),
+			verticalOrigin : Cesium.VerticalOrigin.BOTTOM
+		}
+	});
+	bluePin2 = viewer.entities.add({
+		name: '六塊厝LIUK',
+		//description: '<iframe width="854" height="480" src="https://www.youtube.com/embed/7CKOG-qQKJY" frameborder="0" allowfullscreen></iframe>',
+		position : Cesium.Cartesian3.fromDegrees(121.448851, 25.242299),
+		billboard : {
+			image : pinBuilder.fromColor(Cesium.Color.ROYALBLUE, 48).toDataURL(),
+			verticalOrigin : Cesium.VerticalOrigin.BOTTOM
+		}
+	});
+	bluePin3 = viewer.entities.add({
+		name: '鹿野LUYE',
+		//description: '<iframe width="854" height="480" src="https://www.youtube.com/embed/7CKOG-qQKJY" frameborder="0" allowfullscreen></iframe>',
+		position : Cesium.Cartesian3.fromDegrees(121.542213, 23.897390),
+		billboard : {
+			image : pinBuilder.fromColor(Cesium.Color.ROYALBLUE, 48).toDataURL(),
+			verticalOrigin : Cesium.VerticalOrigin.BOTTOM
+		}
+	});
+	bluePin4 = viewer.entities.add({
+		name: '南灣NAWN',
+		//description: '<iframe width="854" height="480" src="https://www.youtube.com/embed/7CKOG-qQKJY" frameborder="0" allowfullscreen></iframe>',
+		position : Cesium.Cartesian3.fromDegrees(120.763424, 21.959325),
+		billboard : {
+			image : pinBuilder.fromColor(Cesium.Color.ROYALBLUE, 48).toDataURL(),
+			verticalOrigin : Cesium.VerticalOrigin.BOTTOM
+		}
+	});
 
+	screenSpaceEventHandler.setInputAction(function(movement) {
+        var pickedObject = viewer.scene.pick(movement.position);
+		console.log(pickedObject.id);
+		if (Cesium.defined(pickedObject) && (pickedObject.id == bluePin4))
+		{
+			$( function() {
+				$( "#dialog" ).dialog({
+				  autoOpen: true,
+				  width: 600,
+				  height: 350,
+				  modal: true
+				});
+
+				
+				Highcharts.chart('highcharts', {
+
+					title: {
+						text: 'Monthly Average Temperature',
+						x: -20 //center
+					},
+					subtitle: {
+						text: 'Source: WorldClimate.com',
+						x: -20
+					},
+					xAxis: {
+						categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+							'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+					},
+					yAxis: {
+						title: {
+							text: 'Temperature (°C)'
+						},
+						plotLines: [{
+							value: 0,
+							width: 1,
+							color: '#808080'
+						}]
+					},
+					tooltip: {
+						valueSuffix: '°C'
+					},
+					legend: {
+						layout: 'vertical',
+						align: 'right',
+						verticalAlign: 'middle',
+						borderWidth: 0
+					},
+					series: [{
+						name: 'Tokyo',
+							data: [7.0, 6.9, 9.5, 14.5, 18.2, 21.5, 25.2, 26.5, 23.3, 18.3, 13.9, 9.6]
+						}, {
+							name: 'New York',
+							data: [-0.2, 0.8, 5.7, 11.3, 17.0, 22.0, 24.8, 24.1, 20.1, 14.1, 8.6, 2.5]
+						}, {
+							name: 'Berlin',
+							data: [-0.9, 0.6, 3.5, 8.4, 13.5, 17.0, 18.6, 17.9, 14.3, 9.0, 3.9, 1.0]
+						}, {
+							name: 'London',
+							data: [3.9, 4.2, 5.7, 8.5, 11.9, 15.2, 17.0, 16.6, 14.2, 10.3, 6.6, 4.8]
+					}]
+				});
+		
+			});	 
+		}
+
+		console.log(pickedObject.id._name);
+
+    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
 </script>
 </body>
