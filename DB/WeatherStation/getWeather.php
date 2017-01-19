@@ -40,8 +40,7 @@
 	$rows = array();
 	while ($row = $db->fetch_row()){
 		//將陣列內容轉存在PHP的array
-		$data_array[] = array(
-						"key" => $row[0]);
+		$data_array[] = array("key" => $row[0]);
 	}
 	//print_r($data_array);
 	  

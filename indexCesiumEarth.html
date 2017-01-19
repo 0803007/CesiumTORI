@@ -9,7 +9,7 @@
 	<!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
 	<title>ToriMIS</title>
-	<script src="https://d3js.org/d3.v4.min.js"></script>
+	<script src="../js/d3.min.js"></script>
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
 	<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>  <!--這包很大,未來要下載回來  -->
 	<!-- <script src="../../js/ajax_select.js" type="text/javascript" ></script> -->
@@ -52,8 +52,15 @@
 		   background: #333;
 		   border: 1px solid #555;
 		   color: #EEE;
-		 }
-
+		}
+		.input[type=range] {
+		  -webkit-appearance: none;
+		  width: 100%;
+		  border-radius: 8px;
+		  height: 7px;
+		  border: 1px solid #bdc3c7;
+		  background-color: #fff; 
+		}
 	</style>
 	<div class = "loading-mask" id="loadingIMG" style="display:none"><span style="font-size:3em;">Loading .....</span></div>
 	<div id="cesiumContainer"></div>
@@ -77,11 +84,11 @@
 			<option>MV</option>
 		</select>
 		<select id="claassing" onchange="">
-				<option>請選擇航次</option>
+			<option>請選擇航次</option>
 		</select>
 		<button onclick="showClassingFromSQL(document.getElementById('claassing').value)">讀取船次</button>
-		<button onclick="deleteLine()">刪掉船次</button>
-		<button onclick="loadClassingJSON()" style="visibility:hidden">讀取JSON船次(測試按鈕)</button><br>
+		<button onclick="deleteLine()">刪掉船次</button><br>
+		<button onclick="loadClassingJSON()" style="display:none">讀取JSON船次(測試按鈕)</button>
 		
 		<select id="torosMonth" onchange="showTorosDateFromSQL()">
 			<option>請選擇月</option>
@@ -124,7 +131,7 @@
 		</select>
 		<button onclick="loadChlorophyll()">讀取葉綠素</button>
 		<button onclick="deleteChlorophyll()">刪除葉綠素</button><br>
-		<select id="waterTemperature" >
+		<select id="waterTemperature">
 			<option>請選擇時間</option>
 			<option>2016年6月~2016年8月</option>
 			<option>2016年3月~2016年5月</option>
@@ -134,19 +141,18 @@
 		</select>
 		<button onclick="loadWaterTemperature()">讀取水溫</button>
 		<button onclick="deleteWaterTemperature()">刪除水溫</button><br>
-		<input type="range" id="range"  min="0" max="1" step="0.05" value="0.6">
+		<input type="range" id="range" min="0" max="1" step="0.05" value="0.6">
 	</div>
 	<div class="colorbar" >
 		<canvas width="380" height="55" id="cv"></canvas><br>
 	</div>
-	<div class="logo" >
+	<div class="logo">
 		<!-- <canvas width="380" height="55" id="logo"></canvas> -->
 		  
 		<a href="http://www.tori.org.tw/"><img id="logo1" src="DB/Images/foot_logo.png"></a>
 		<a href="http://www.tori.org.tw/"><img id="logo2" src="DB/Images/LOGO.png"></a>
 	</div>
 	<div id="dialog" title="Basic dialog" >
-	   
 	    Date:<input type="text" id="datepicker">
 		Select a speed:
 		<select name="speed" id="selectWeather">		
@@ -154,10 +160,9 @@
 		  <option>Humidity</option>
 		  <option>Pressure</option>
 		</select>
-		<button class="ui-button ui-widget ui-corner-all" onclick="showWeatherFromSQL()">SET</button><br>
-		<div id="highcharts" title="Basic dialog" ><br>
+		<button class="ui-button ui-widget ui-corner-all" onclick="showWeatherFromSQL()">Set</button><br>
+		<div id="highcharts" title="Basic dialog"><br>
 		<p>This is the default dialog which is useful for displaying information. The dialog window can be moved, resized and closed with the 'x' icon.</p>
-		
 	</div>
 	<!-- <div id="container" style="min-width: 610px; height: 800px; margin: 0 auto"></div> -->
 </head>
@@ -185,7 +190,6 @@
 		
 		alert('Color: rgb(' + x[0] + ', ' + x[1] + ', ' + x[2] + ')');
 	};*/
-	
 
 	// Global Var
 	var block = null;
