@@ -38,12 +38,17 @@
     $db->query($sqlstr);
 
 	$rows = array();
+	$count = 0;
 	while ($row = $db->fetch_row()){
+		$count++;
+		if ($count%10!=1)
+			continue;
+		
 		//將陣列內容轉存在PHP的array
 		$data_array[] = array("key" => $row[0]);
+		
 	}
 	//print_r($data_array);
-	  
 	echo json_encode($data_array);
 
 	/*

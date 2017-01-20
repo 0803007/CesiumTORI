@@ -12,10 +12,10 @@
 	set_time_limit(0);
 	
 	//設定table name
-	$posname = "NAWN";
+	$posname = "DATN";
 	
 	//取得檔案路徑
-	$path = "J:\\海洋工作\\資料庫\\DATA\\\TOROS_Weather\\\Level0\\NAWN\\2016\\NAWN_ptu_*.*";
+	$path = "G:\\海洋工作\\資料庫\\DATA\\\TOROS_Weather\\\Level0\\$posname\\2016\\$posname"."_ptu_*.*";
 	$path =  iconv('UTF-8','Big5', $path);
 echo $path;
 	$filepathList = glob($path);
@@ -53,20 +53,24 @@ echo $path;
 		$file = fopen($filepathList[$i], "r");
 		$count = 0;
 		// Read the file line by line until the end
-		while (($data = fgetcsv($file, 1000, ",")) !== FALSE){
+		while (($data = fgetcsv($file, 1000, ",")) !== FALSE){		
+			//判斷是否為數字  $pressue需要扣掉最後一個字元  
+			if ( (is_numeric($data[2])) && (is_numeric($data[3])) && is_numeric(substr($data[4],0,-1)))
+			{	
 				$time1 = $data[0];
 				$time2 = $data[1];
-				echo $time2;
+							
 				$temperature = $data[2];
 				$humidity = $data[3];
 				$pressue = $data[4];
 				//echo $Longitude . "<br />" . $Voyage . "<br />\n" ;
-
+echo "$time1";	
 				//insert to DB
 				$sqlStr.=" ('$time1','$time2',$temperature,$humidity,$pressue),";
 				$count = $count + 1;
 				//if ($count >1000)
 				//   break;
+			}
 		}
 		$sqlStr = substr($sqlStr,0,-1);  //delete last char
 		//echo $sqlStr;
