@@ -17,6 +17,7 @@
 	<script src="https://code.highcharts.com/modules/exporting.js"></script>
 	<script src="Build/Cesium/Cesium.js"></script>
 	<script src="../js/WebGLGlobeDataSource.js"></script>
+	<script src="DB/Images/Site.js" charset="big5"></script>
 	<style>
 		@import url(Apps/Sandcastle/templates/bucket.css);
 		@import url(Build/Cesium/Widgets/widgets.css);
@@ -135,6 +136,7 @@
 		</select>
 		<button onclick="loadWaterTemperature()">讀取水溫</button>
 		<button onclick="deleteWaterTemperature()">刪除水溫</button><br>
+		<button onclick="loadPM25()">PM2.5(測試)</button><br>
 		<input type="range" id="range" min="0" max="1" step="0.05" value="0.6"><br>
 		<canvas width="380" height="55" id="cv"></canvas><br>
 	</div>
@@ -1092,9 +1094,7 @@
 				dataType:"JSON",
 
 				success: function(data){
-				
-					//Add soption
-					var len = data.length;
+
 					//Add Line
 					var array = [];
 					var len = data.length;
@@ -1119,6 +1119,67 @@
 
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
+	
+	function loadPM25(){
+
+	$.ajax({
+		url: "http://opendata.epa.gov.tw/ws/Data/REWIQA/?$orderby=SiteName&$skip=0&$top=1000&format=json",
+		dataType:"jsonp",
+		success: function(data){			
+			for (i=0;i<data.length;i++){
+				var key = data[i].SiteName;
+				for (j=0;j<site.length;j++){
+					//Match Site
+					if (key.match(site[j].SiteName)){
+						var lon = site[j].TWD97Lon;
+						var lat = site[j].TWD97Lat;
+						var pm25 = data[i]["PM2.5"];
+						//Set Color
+						var pmColor = Cesium.Color.fromCssColorString('#9cff9c');
+						if (0<=pm25&&pm25<=11) pmColor = Cesium.Color.fromCssColorString('#9cff9c');
+						else if (12<=pm25&&pm25<=23) pmColor = Cesium.Color.fromCssColorString('#31ff00');
+						else if (24<=pm25&&pm25<=35) pmColor = Cesium.Color.fromCssColorString('#31cf00');
+						else if (36<=pm25&&pm25<=41) pmColor = Cesium.Color.fromCssColorString('#ffff00');
+						else if (42<=pm25&&pm25<=47) pmColor = Cesium.Color.fromCssColorString('#ffcf00');
+						else if (48<=pm25&&pm25<=53) pmColor = Cesium.Color.fromCssColorString('#ff9a00');
+						else if (54<=pm25&&pm25<=58) pmColor = Cesium.Color.fromCssColorString('#ff6464');
+						else if (59<=pm25&&pm25<=64) pmColor = Cesium.Color.fromCssColorString('#ff0000');
+						else if (65<=pm25&&pm25<=70) pmColor = Cesium.Color.fromCssColorString('#990000');
+						else if (71<=pm25          ) pmColor = Cesium.Color.fromCssColorString('#ce30ff');
+						//Add Billboard
+						var surfacePosition = Cesium.Cartesian3.fromDegrees(lon, lat, 0);
+						var heightPosition = Cesium.Cartesian3.fromDegrees(lon, lat, pm25 * 1000);
+						var polyline = new Cesium.PolylineGraphics();
+						polyline.material = new Cesium.ColorMaterialProperty(pmColor);
+						polyline.width = new Cesium.ConstantProperty(5);
+						polyline.followSurface = new Cesium.ConstantProperty(false);
+						polyline.positions = new Cesium.ConstantProperty([surfacePosition, heightPosition]);
+						viewer.entities.add({
+							name : site[j].SiteName,
+							description:  "<div style='background-color:#a0a0a0; padding:0px;'><table>"
+										  +"<tr><td>County</td><td>" + data[i].County + "</td></tr>"
+							              +"<tr><td>PM2.5</td><td>" + data[i]["PM2.5"] + "</td></tr>"
+										  +"<tr><td>PublishTime</td><td>" + data[i]["PublishTime"] + "</td></tr>"
+										  +"</table></div>",
+							polyline : polyline,
+							/*position : Cesium.Cartesian3.fromDegrees(lon, lat),
+							billboard : {
+								image : pinBuilder.fromColor(pmColor, 48).toDataURL(),
+								verticalOrigin : Cesium.VerticalOrigin.BOTTOM
+							}*/
+							
+						});
+					}
+				}
+			}
+			viewer.flyTo(viewer.entities);
+		},
+		error: function(data){
+			alert("error");
+		}
+	});
+		
+	}
 </script>
 </body>
 </html>
