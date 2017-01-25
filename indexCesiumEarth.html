@@ -1136,7 +1136,7 @@
 						var pm25 = data[i]["PM2.5"];
 						//Set Color
 						var pmColor = Cesium.Color.fromCssColorString('#9cff9c');
-						if (0<=pm25&&pm25<=11) pmColor = Cesium.Color.fromCssColorString('#9cff9c');
+						if      ( 0<=pm25&&pm25<=11) pmColor = Cesium.Color.fromCssColorString('#9cff9c');
 						else if (12<=pm25&&pm25<=23) pmColor = Cesium.Color.fromCssColorString('#31ff00');
 						else if (24<=pm25&&pm25<=35) pmColor = Cesium.Color.fromCssColorString('#31cf00');
 						else if (36<=pm25&&pm25<=41) pmColor = Cesium.Color.fromCssColorString('#ffff00');
@@ -1151,17 +1151,25 @@
 						var heightPosition = Cesium.Cartesian3.fromDegrees(lon, lat, pm25 * 1000);
 						var polyline = new Cesium.PolylineGraphics();
 						polyline.material = new Cesium.ColorMaterialProperty(pmColor);
-						polyline.width = new Cesium.ConstantProperty(5);
+						polyline.width = new Cesium.ConstantProperty(10);
 						polyline.followSurface = new Cesium.ConstantProperty(false);
 						polyline.positions = new Cesium.ConstantProperty([surfacePosition, heightPosition]);
 						viewer.entities.add({
 							name : site[j].SiteName,
+							
+							
 							description:  "<div style='background-color:#a0a0a0; padding:0px;'><table>"
 										  +"<tr><td>County</td><td>" + data[i].County + "</td></tr>"
 							              +"<tr><td>PM2.5</td><td>" + data[i]["PM2.5"] + "</td></tr>"
 										  +"<tr><td>PublishTime</td><td>" + data[i]["PublishTime"] + "</td></tr>"
 										  +"</table></div>",
-							polyline : polyline,
+							position: Cesium.Cartesian3.fromDegrees(lon, lat,  pm25 * 500),  //the Height must be half of length
+							cylinder : {
+								length : pm25 * 1000,
+								topRadius : 2000.0,
+								bottomRadius : 2000.0,
+								material : pmColor
+							}
 							/*position : Cesium.Cartesian3.fromDegrees(lon, lat),
 							billboard : {
 								image : pinBuilder.fromColor(pmColor, 48).toDataURL(),
