@@ -19,7 +19,6 @@
 	$path =  iconv('UTF-8','Big5', $path);
 	$filepathList = glob($path);
 	
-	
 	//連線資料庫
 	$db = new DB();
     $db->connect_db($_DB['host'], $_DB['username'], $_DB['password'], $_DB['dbname']);

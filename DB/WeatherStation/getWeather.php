@@ -13,7 +13,7 @@
 	//$pos = "NAWN";
 	$tname = $pos ."_ptu_$date";
 
- /*
+/*
      if($select_op != ""){ 
              if($select_op == "1"){ 
                      echo "你選擇到1的選項"; 

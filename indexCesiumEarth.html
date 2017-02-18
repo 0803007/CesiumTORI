@@ -22,13 +22,13 @@
 		@import url(Apps/Sandcastle/templates/bucket.css);
 		@import url(Build/Cesium/Widgets/widgets.css);
 		html, body, #cesiumContainer {
-		  width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;  
+			width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;  
 		}
 		.toolbar-left {
-		 display: block;
-		 position: absolute;
-		 top: 5px;
-		 left: 5px;
+			display: block;
+			position: absolute;
+			top: 5px;
+			left: 5px;
 		}
 		.loading-mask {
 			display: block;
@@ -44,20 +44,20 @@
 			right: 3%;
 		}
 		.ui-datepicker {
-		   background: #333;
-		   border: 1px solid #555;
-		   color: #EEE;
+		    background: #333;
+		    border: 1px solid #555;
+		    color: #EEE;
 		}
 		.input[type=range] {
-		  webkit-appearance: none;
-		  width: 100%;
-		  border-radius: 8px;
-		  height: 7px;
-		  border: 1px solid #bdc3c7;
-		  background-color: #fff; 
+			webkit-appearance: none;
+			width: 100%;
+			border-radius: 8px;
+			height: 7px;
+			border: 1px solid #bdc3c7;
+			background-color: #fff; 
 		}
 	</style>
-	<div class = "loading-mask" id="loadingIMG" style="display:none"><span style="font-size:3em;">Loading .....</span></div>
+	<div class="loading-mask" id="loadingIMG" style="display:none"><span style="font-size:3em;">Loading .....</span></div>
 	<div id="cesiumContainer"></div>
 	<div id="mousePosition">Loading...</div>
 	<div class="toolbar-left">
@@ -90,7 +90,7 @@
 			<option>201611</option>
 			<option>201610</option>
 			<option>201609</option>
-			<option>201608</option>
+<!-- 		<option>201608</option>
 			<option>201607</option>
 			<option>201606</option>
 			<option>201605</option>
@@ -109,7 +109,7 @@
 			<option>201504</option>
 			<option>201503</option>
 			<option>201502</option>
-			<option>201501</option>
+			<option>201501</option> -->
 		</select>
 		<select id="torosDate" onchange="">
 			<option>請選擇日</option>
@@ -136,7 +136,8 @@
 		</select>
 		<button onclick="loadWaterTemperature()">讀取水溫</button>
 		<button onclick="deleteWaterTemperature()">刪除水溫</button><br>
-		<button onclick="loadPM25()">PM2.5(測試)</button><br>
+		<button onclick="loadPM25()">PM2.5(測試)</button>
+		<button onclick="deletePM25()">刪除PM2.5(測試)</button><br>
 		<input type="range" id="range" min="0" max="1" step="0.05" value="0.6"><br>
 		<canvas width="380" height="55" id="cv"></canvas><br>
 	</div>
@@ -150,9 +151,9 @@
 	    Date:<input type="text" id="datepicker">
 		Select a speed:
 		<select name="speed" id="selectWeather">		
-		  <option selected="selected">Temperature</option>
-		  <option>Humidity</option>
-		  <option>Pressure</option>
+			<option selected="selected">Temperature</option>
+			<option>Humidity</option>
+			<option>Pressure</option>
 		</select>
 		<button class="ui-button ui-widget ui-corner-all" onclick="showWeatherFromSQL()">Set</button><br>
 		<div id="highcharts" title="Basic dialog"><br>
@@ -190,10 +191,11 @@
 	var entityLineClassing = null;
 	var entityBoat = null
 	var entityArrowToros = []; //array
+	var entityPM25 = [];//array
 	var imageLayerChlorophyll = null;
 	var imageLayerWaterTemperature = null;
 	var bAutoRotation = true;
-	var cartographic = new Cesium.Cartographic();;
+	var cartographic = new Cesium.Cartographic();
 	var modelBoat = null;   //test Model
 	var bluePin1 = null;
 	var bluePin2 = null;
@@ -342,32 +344,33 @@
 	//viewer.scene.screenSpaceCameraController.enableCollisionDetection = false;
 	
 	//Draw the selector while the user drags the mouse while holding shift
-	screenSpaceEventHandler.setInputAction(function drawSelector(movement) {
-			if (!mouseDown) {
-				return;
+	screenSpaceEventHandler.setInputAction(function drawSelector(movement) 
+	{
+		if (!mouseDown) {
+			return;
+		}
+
+		cartesian = viewer.camera.pickEllipsoid(movement.endPosition, viewer.scene.globe.ellipsoid, cartesian);
+
+		if (cartesian) {
+			//mouse cartographic
+			var tempCartographic = Cesium.Cartographic.fromCartesian(cartesian, Cesium.Ellipsoid.WGS84, tempCartographic);
+
+			if (!firstPointSet) {
+			  Cesium.Cartographic.clone(tempCartographic, firstPoint);
+			  firstPointSet = true;
 			}
-
-			cartesian = viewer.camera.pickEllipsoid(movement.endPosition, viewer.scene.globe.ellipsoid, cartesian);
-
-			if (cartesian) {
-				//mouse cartographic
-				var tempCartographic = Cesium.Cartographic.fromCartesian(cartesian, Cesium.Ellipsoid.WGS84, tempCartographic);
-
-				if (!firstPointSet) {
-				  Cesium.Cartographic.clone(tempCartographic, firstPoint);
-				  firstPointSet = true;
-				}
-				else {
-				  rectangleCoordinates.east = Math.max(tempCartographic.longitude, firstPoint.longitude);
-				  rectangleCoordinates.west = Math.min(tempCartographic.longitude, firstPoint.longitude);
-				  rectangleCoordinates.north = Math.max(tempCartographic.latitude, firstPoint.latitude);
-				  rectangleCoordinates.south = Math.min(tempCartographic.latitude, firstPoint.latitude);
-				  selector.show = true;
-				}
+			else {
+			  rectangleCoordinates.east = Math.max(tempCartographic.longitude, firstPoint.longitude);
+			  rectangleCoordinates.west = Math.min(tempCartographic.longitude, firstPoint.longitude);
+			  rectangleCoordinates.north = Math.max(tempCartographic.latitude, firstPoint.latitude);
+			  rectangleCoordinates.south = Math.min(tempCartographic.latitude, firstPoint.latitude);
+			  selector.show = true;
 			}
-		}, Cesium.ScreenSpaceEventType.MOUSE_MOVE, Cesium.KeyboardEventModifier.SHIFT);
+		}
+	}, Cesium.ScreenSpaceEventType.MOUSE_MOVE, Cesium.KeyboardEventModifier.SHIFT);
 
-		var getSelectorLocation = new Cesium.CallbackProperty(function getSelectorLocation(time, result) {
+	var getSelectorLocation = new Cesium.CallbackProperty(function getSelectorLocation(time, result) {
 		return Cesium.Rectangle.clone(rectangleCoordinates, result);
 	}, false);
 
@@ -387,7 +390,6 @@
 		selector.show = false;
 	}, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 	
-
 	selector = viewer.entities.add({
 		selectable: false,
 		show: false,
@@ -749,8 +751,8 @@
 			},
 			series: [{
 				name: pos,
-					data: data
-				}]
+				data: data
+			}]
 		});
 	}
 	
@@ -783,12 +785,10 @@
 				polyline : {
 					positions : Cesium.Cartesian3.fromDegreesArray(test),
 					width : 2,
-					material : Cesium.Color.RED
-			}});
-
+					material : Cesium.Color.RED}
+			});
 			viewer.flyTo(jsonLine);
-			
-			
+
 		}).otherwise(function(error) {
 			// an error occurred
 		});
@@ -926,8 +926,6 @@
 		}
 			
 		entityArrowToros = [];
-		//viewer.entities.removeAll();
-		//entityArrowToros = null
 	}
 	function loadChlorophyll(){
 	    if (imageLayerWaterTemperature!=null)
@@ -993,7 +991,6 @@
 		var canvas = document.getElementById('cv');
 		var context = canvas.getContext('2d');
 		context.clearRect(0, 0, canvas.width, canvas.height);
-		
 	}
 	
 	//--------------Animation--------------
@@ -1116,77 +1113,89 @@
 		}
 
 		console.log(pickedObject.id._name);
-
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
 	
 	function loadPM25(){
-
-	$.ajax({
-		url: "http://opendata.epa.gov.tw/ws/Data/REWIQA/?$orderby=SiteName&$skip=0&$top=1000&format=json",
-		dataType:"jsonp",
-		success: function(data){			
-			for (i=0;i<data.length;i++){
-				var key = data[i].SiteName;
-				for (j=0;j<site.length;j++){
-					//Match Site
-					if (key.match(site[j].SiteName)){
-						var lon = site[j].TWD97Lon;
-						var lat = site[j].TWD97Lat;
-						var pm25 = data[i]["PM2.5"];
-						//Set Color
-						var pmColor = Cesium.Color.fromCssColorString('#9cff9c');
-						if      ( 0<=pm25&&pm25<=11) pmColor = Cesium.Color.fromCssColorString('#9cff9c');
-						else if (12<=pm25&&pm25<=23) pmColor = Cesium.Color.fromCssColorString('#31ff00');
-						else if (24<=pm25&&pm25<=35) pmColor = Cesium.Color.fromCssColorString('#31cf00');
-						else if (36<=pm25&&pm25<=41) pmColor = Cesium.Color.fromCssColorString('#ffff00');
-						else if (42<=pm25&&pm25<=47) pmColor = Cesium.Color.fromCssColorString('#ffcf00');
-						else if (48<=pm25&&pm25<=53) pmColor = Cesium.Color.fromCssColorString('#ff9a00');
-						else if (54<=pm25&&pm25<=58) pmColor = Cesium.Color.fromCssColorString('#ff6464');
-						else if (59<=pm25&&pm25<=64) pmColor = Cesium.Color.fromCssColorString('#ff0000');
-						else if (65<=pm25&&pm25<=70) pmColor = Cesium.Color.fromCssColorString('#990000');
-						else if (71<=pm25          ) pmColor = Cesium.Color.fromCssColorString('#ce30ff');
-						//Add Billboard
-						var surfacePosition = Cesium.Cartesian3.fromDegrees(lon, lat, 0);
-						var heightPosition = Cesium.Cartesian3.fromDegrees(lon, lat, pm25 * 1000);
-						var polyline = new Cesium.PolylineGraphics();
-						polyline.material = new Cesium.ColorMaterialProperty(pmColor);
-						polyline.width = new Cesium.ConstantProperty(10);
-						polyline.followSurface = new Cesium.ConstantProperty(false);
-						polyline.positions = new Cesium.ConstantProperty([surfacePosition, heightPosition]);
-						viewer.entities.add({
-							name : site[j].SiteName,
+		$.ajax({
+			url: "http://opendata.epa.gov.tw/ws/Data/REWIQA/?$orderby=SiteName&$skip=0&$top=1000&format=json",
+			dataType:"jsonp",
+			success: function(data){	
+				console.log(data.length);
+				console.log(site.length);
+				for(i=0;i<data.length;i++){
+					var key = data[i].SiteName;
+					for(j=0;j<site.length;j++){
+						//Match Site
+						if (key.match(site[j].SiteName)){
+							var lon = site[j].TWD97Lon;
+							var lat = site[j].TWD97Lat;
+							var pm25 = data[i]["PM2.5"];
+							//Set Color
+							var pmColor = Cesium.Color.fromCssColorString('#9cff9c');
+							if      ( 0<=pm25&&pm25<=11) pmColor = Cesium.Color.fromCssColorString('#9cff9c');
+							else if (12<=pm25&&pm25<=23) pmColor = Cesium.Color.fromCssColorString('#31ff00');
+							else if (24<=pm25&&pm25<=35) pmColor = Cesium.Color.fromCssColorString('#31cf00');
+							else if (36<=pm25&&pm25<=41) pmColor = Cesium.Color.fromCssColorString('#ffff00');
+							else if (42<=pm25&&pm25<=47) pmColor = Cesium.Color.fromCssColorString('#ffcf00');
+							else if (48<=pm25&&pm25<=53) pmColor = Cesium.Color.fromCssColorString('#ff9a00');
+							else if (54<=pm25&&pm25<=58) pmColor = Cesium.Color.fromCssColorString('#ff6464');
+							else if (59<=pm25&&pm25<=64) pmColor = Cesium.Color.fromCssColorString('#ff0000');
+							else if (65<=pm25&&pm25<=70) pmColor = Cesium.Color.fromCssColorString('#990000');
+							else if (71<=pm25          ) pmColor = Cesium.Color.fromCssColorString('#ce30ff');
+							//Add Billboard
+							var surfacePosition = Cesium.Cartesian3.fromDegrees(lon, lat, 0);
+							var heightPosition = Cesium.Cartesian3.fromDegrees(lon, lat, pm25 * 1000);
+							var polyline = new Cesium.PolylineGraphics();
+							polyline.material = new Cesium.ColorMaterialProperty(pmColor);
+							polyline.width = new Cesium.ConstantProperty(10);
+							polyline.followSurface = new Cesium.ConstantProperty(false);
+							polyline.positions = new Cesium.ConstantProperty([surfacePosition, heightPosition]);
 							
-							
-							description:  "<div style='background-color:#a0a0a0; padding:0px;'><table>"
-										  +"<tr><td>County</td><td>" + data[i].County + "</td></tr>"
-							              +"<tr><td>PM2.5</td><td>" + data[i]["PM2.5"] + "</td></tr>"
-										  +"<tr><td>PublishTime</td><td>" + data[i]["PublishTime"] + "</td></tr>"
-										  +"</table></div>",
-							position: Cesium.Cartesian3.fromDegrees(lon, lat,  pm25 * 500),  //the Height must be half of length
-							cylinder : {
-								length : pm25 * 1000,
-								topRadius : 2000.0,
-								bottomRadius : 2000.0,
-								material : pmColor
+							if (0<=pm25 && pm25<=120){
+								var entity = viewer.entities.add({
+									name : site[j].SiteName,						
+									description:  "<div style='background-color:#a0a0a0; padding:0px;'><table>"
+												  +"<tr><td>County</td><td>" + data[i].County + "</td></tr>"
+												  +"<tr><td>PM2.5</td><td>" + data[i]["PM2.5"] + "</td></tr>"
+												  +"<tr><td>PublishTime</td><td>" + data[i]["PublishTime"] + "</td></tr>"
+												  +"</table></div>",
+									position: Cesium.Cartesian3.fromDegrees(lon, lat,  pm25 * 500),  //the Height must be half of length
+									cylinder : {
+										length : pm25 * 1000,
+										topRadius : 2000.0,
+										bottomRadius : 2000.0,
+										material : pmColor
+									}
+									//position : Cesium.Cartesian3.fromDegrees(lon, lat),
+									//billboard : {
+									//	image : pinBuilder.fromColor(pmColor, 48).toDataURL(),
+									//	verticalOrigin : Cesium.VerticalOrigin.BOTTOM
+									//}
+									
+								});
+								entityPM25.push(entity);
 							}
-							/*position : Cesium.Cartesian3.fromDegrees(lon, lat),
-							billboard : {
-								image : pinBuilder.fromColor(pmColor, 48).toDataURL(),
-								verticalOrigin : Cesium.VerticalOrigin.BOTTOM
-							}*/
-							
-						});
+						}
 					}
 				}
+				viewer.flyTo(viewer.entities);
+			},
+			error: function(data){
+				alert("error");
 			}
-			viewer.flyTo(viewer.entities);
-		},
-		error: function(data){
-			alert("error");
+		});
+	}
+	
+	function deletePM25() {	
+		if (entityPM25.length == 0)
+			return;
+			
+	    for(var i=0;i<entityPM25.length;i++){
+			viewer.entities.remove(entityPM25[i]);
 		}
-	});
-		
+			
+		entityPM25 = [];
 	}
 </script>
 </body>
