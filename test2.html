@@ -1,0 +1,1232 @@
+<!DOCTYPE html> 
+<html lang="en">
+<head>
+	<!-- Use correct character set. -->
+	<meta charset="utf-8">
+	<!-- Tell IE to use the latest, best version. -->
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+	<title>ToriMIS</title>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+	<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>  <!--這包很大,未來要下載回來  -->
+	<!-- <script src="../../js/ajax_select.js" type="text/javascript" ></script> -->
+	<!--<script src="https://code.highcharts.com/highcharts.js"></script>
+	<script src="https://code.highcharts.com/modules/exporting.js"></script>-->
+	<script src="Build/Cesium/Cesium.js"></script>
+	<script src="data/pm25/site.js"></script>
+
+	<style>
+		@import url(Apps/Sandcastle/templates/bucket.css);
+		@import url(Build/Cesium/Widgets/widgets.css);
+		html, body, #cesiumContainer {
+			width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;  
+		}
+		.toolbar-left {
+			display: block;
+			position: absolute;
+			top: 5px;
+			left: 5px;
+		}
+		.loading-mask {
+			display: block;
+			position: absolute;
+			z-index: 2;
+			top: 50%;
+		    left: 45%;
+		}
+		.logo {	
+			position: absolute;
+			z-index: 2;
+			bottom: 7%;
+			right: 3%;
+		}
+		.ui-datepicker {
+		    background: #333;
+		    border: 1px solid #555;
+		    color: #EEE;
+		}
+		.input[type=range] {
+			webkit-appearance: none;
+			width: 100%;
+			border-radius: 8px;
+			height: 7px;
+			border: 1px solid #bdc3c7;
+			background-color: #fff; 
+		}
+	</style>
+	<div class="loading-mask" id="loadingIMG" style="display:none"><span style="font-size:3em;">Loading .....</span></div>
+	<div id="cesiumContainer"></div>
+	<div id="mousePosition">Loading...</div>
+	<div class="toolbar-left">
+		<p id="textPosition">世界座標</p> 
+		<input type="checkbox" id="cbox1" value="second_checkbox" onchange="showRotation(this.checked)" > <label>Rotation</label>   
+		<input type="checkbox" id="cbox3" value="second_checkbox" onchange="showTerrain(this.checked)" > <label>Terrain</label> 
+		<input type="checkbox" id="cbox4" value="second_checkbox" onchange="showLight(this.checked)" > <label>Sun</label> <br>
+		<button onclick="loadVector()">大氣資料(彩)</button>
+		<button onclick="loadVector2()">大氣資料(灰)</button>
+		<button onclick="loadVector3()">大氣資料(範例資料)</button>
+		<button onclick="loadSequenceImage()">動態影像</button>
+		<button onclick="loadTorosJSON()">讀取Flow</button>
+		<button onclick="loadWaterTemperature()">讀取水溫</button>
+		<button onclick="deleteWaterTemperature()">刪除水溫</button>
+		<button onclick="loadClassingJSON()">讀取航線</button>
+		<button onclick="loadPM25()">PM2.5(測試)</button><br>
+		<button onclick="test()">move(測試)</button><br>
+		<button onclick="loadDeleteAll()">刪除</button><br>
+		<canvas width="380" height="55" id="cv"></canvas><br>
+		<!--<button onclick="deletePM25()">大氣資料(測試)</button><br> -->
+	</div>
+
+	<div id="dialog" title="Basic dialog" >
+	    Date:<input type="text" id="datepicker">
+		Select a speed:
+		<select name="speed" id="selectWeather">		
+			<option selected="selected">Temperature</option>
+			<option>Humidity</option>
+			<option>Pressure</option>
+		</select>
+		<button class="ui-button ui-widget ui-corner-all" onclick="showWeatherFromSQL()">Set</button><br>
+		<div id="highcharts" title="Basic dialog"><br>
+		<p>This is the default dialog which is useful for displaying information. The dialog window can be moved, resized and closed with the 'x' icon.</p>
+	</div>
+	<!-- <div id="container" style="min-width: 610px; height: 800px; margin: 0 auto"></div> -->
+</head>
+<body>
+
+<script>
+    /*
+	var v  = document.getElementById('cv'),
+    ctx = cv.getContext('2d');
+
+	for(var i = 0; i <= 255; i++) {
+		ctx.beginPath();
+		
+		var color = 'rgb(100, ' + i + ', ' + i + ')';
+		ctx.fillStyle = color;
+		
+		ctx.fillRect(i * 2, 0, 2, 50);
+	}
+
+	cv.onclick = function(e) {
+		var x = e.offsetX,
+			y = e.offsetY,
+			p = ctx.getImageData(x, y, 1, 1),
+			x = p.data;
+		
+		alert('Color: rgb(' + x[0] + ', ' + x[1] + ', ' + x[2] + ')');
+	};*/
+
+	// Global Var
+	var block = null;
+	var entityLineClassing = null;
+	var entityBoat = null
+	var entityArrowToros = []; //array
+	var entityPM25 = [];//array
+	var imageLayerChlorophyll = null;
+	var imageLayerWaterTemperature = null;
+	var bAutoRotation = false;
+	var cartographic = new Cesium.Cartographic();
+	var modelBoat = null;   //test Model
+	var bluePin1 = null;
+	var bluePin2 = null;
+	var bluePin3 = null;
+	var bluePin4 = null;
+	var posWeather = "NAWN";
+	var timer = null;
+	var gPoints = null;
+	var gPoints2 = null;
+	var gPoints3 = null;
+   
+	/*var widget = new Cesium.CesiumWidget('cesiumContainer');
+	viewer.scene.debugShowFramesPerSecond = true;
+	var layers = widget.imageryLayers;
+	
+	var glacierData = layers.addImageryProvider(new Cesium.SingleTileImageryProvider({
+		url: '../../Images/V20162452016274.L3m_MO_SNPP_CHL_chlor_a_4km.nc.png'
+		}));
+
+	glacierData.alpha = 0.2;*/
+	
+	//Init Cesium	
+	Cesium.BingMapsApi.defaultKey = "y10PwCCQ3kETfTfZrpia~WuBQuZSyqg3XTS3LFnjonw~AsJ0CEBEcA2bth5UvagyEvpWaC1Ww71fVt26OaFrWlS7ZSzrnkgBOUFmA1hVweMG";//license
+    var viewer = new Cesium.Viewer('cesiumContainer', { infoBox : true });
+	var pinBuilder = new Cesium.PinBuilder();
+	var layers = viewer.scene.imageryLayers;
+	
+	//set iframe
+	viewer.infoBox.frame.sandbox = "allow-same-origin allow-top-navigation allow-pointer-lock allow-popups allow-forms allow-scripts";
+	
+	//init sun light
+	viewer.scene.debugShowFramesPerSecond = true;
+	viewer.scene.globe.enableLighting = false;
+	//viewer.scene.sun.glowFactor = 10; 
+	
+	//var credit = new Cesium.Credit('Title', 'favicon.ico', 'http://www.cesiumjs.org');
+	//viewer.scene.frameState.creditDisplay.addDefaultCredit(credit)
+	
+	//Use STK World , will reduce FPS
+	/*
+	viewer.terrainProvider = new Cesium.CesiumTerrainProvider({
+		url : 'https://assets.agi.com/stk-terrain/world',
+		requestWaterMask : true,
+		requestVertexNormals : true
+	});*/
+	
+	// Init ScreenSpaceEventHandler
+	var screenSpaceEventHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+	var cartesian = new Cesium.Cartesian3();
+	var rectangleCoordinates = new Cesium.Rectangle();
+	var scratchCartographic = new Cesium.Cartographic();
+	var center = new Cesium.Cartographic();
+	var firstPoint = new Cesium.Cartographic();
+	var firstPointSet = false;
+	var mouseDown = false;
+
+	
+	//Default auto rotation
+	spinGlobe( 0.0  ); //default 
+	function spinGlobe( dynamicRate ){
+		 var previousTime = Date.now();
+
+		 viewer.clock.onTick.addEventListener(function(clock) {
+			if (bAutoRotation){
+				var spinRate = dynamicRate;
+				var currentTime = Date.now();
+				var delta = ( currentTime - previousTime ) / 10000;
+				previousTime = currentTime;
+				viewer.scene.camera.rotate(Cesium.Cartesian3.UNIT_Z, -spinRate * delta);
+			}
+		});
+	}
+	
+	function showRotation(checked){
+		bAutoRotation = checked;
+	}
+	
+	function showLogo(checked){
+		if (checked){
+			document.getElementById('logo1').style = "display:visible";
+			document.getElementById('logo2').style = "display:visible";	
+			
+			document.getElementsByClassName("cesium-widget-credits")[0].style = "display:visible";
+								
+		}else{
+			document.getElementById('logo1').style = "display:none";
+			document.getElementById('logo2').style = "display:none";
+			
+			document.getElementsByClassName("cesium-widget-credits")[0].style = "display:none";
+		}
+	}
+	
+	function showTerrain(checked){
+		if (checked){
+			viewer.terrainProvider = new Cesium.CesiumTerrainProvider({
+				url : 'https://assets.agi.com/stk-terrain/world',
+				requestWaterMask : true,
+				requestVertexNormals : true
+			});
+		}else{
+			viewer.terrainProvider =  new Cesium.EllipsoidTerrainProvider({});
+
+		}
+	}
+	
+	function showLight(checked){
+		viewer.scene.globe.enableLighting = checked;
+	}
+	
+	function showTOROSStation(check){
+		if (check ){
+			bluePin1.show = true;
+			bluePin2.show = true;
+			bluePin3.show = true;
+			bluePin4.show = true;
+		}else{
+			bluePin1.show = false;
+			bluePin2.show = false;
+			bluePin3.show = false;
+			bluePin4.show = false;
+		}
+	}
+	
+	//Get & Show Mouse Position
+	viewer.scene.canvas.addEventListener('mousemove', function (e) {
+		//var entity = viewer.entities.getById('alo');
+		var ellipsoid = viewer.scene.globe.ellipsoid;
+		// Mouse over the globe to see the cartographic position
+		var cartesian = viewer.camera.pickEllipsoid(new Cesium.Cartesian2(e.clientX,e.clientY), ellipsoid);
+
+		if (cartesian) {
+		    bAutoRotation = false;
+			cartographic = ellipsoid.cartesianToCartographic(cartesian);
+			var longitudeString = Cesium.Math.toDegrees(cartographic.longitude).toFixed(5);
+			var latitudeString = Cesium.Math.toDegrees(cartographic.latitude).toFixed(5);
+			
+			document.getElementById("textPosition").innerHTML = "Longitude:" + longitudeString  + " , Latitude:" + latitudeString;
+			//entity.position = cartesian;
+			//entity.label.show = true;
+			//entity.label.text = '(' + longitudeString + ', ' + latitudeString + ')';
+		} else {
+			//entity.label.show = false;
+		}
+			
+	});
+	
+	//Disable some unneeded camera operations
+	//viewer.scene.screenSpaceCameraController.enableTranslate = false;
+	//viewer.scene.screenSpaceCameraController.enableTilt = false;
+	viewer.scene.screenSpaceCameraController.enableLook = false;
+	//viewer.scene.screenSpaceCameraController.enableCollisionDetection = false;
+	
+	//Draw the selector while the user drags the mouse while holding shift
+	screenSpaceEventHandler.setInputAction(function drawSelector(movement) 
+	{
+		if (!mouseDown) {
+			return;
+		}
+
+		cartesian = viewer.camera.pickEllipsoid(movement.endPosition, viewer.scene.globe.ellipsoid, cartesian);
+
+		if (cartesian) {
+			//mouse cartographic
+			var tempCartographic = Cesium.Cartographic.fromCartesian(cartesian, Cesium.Ellipsoid.WGS84, tempCartographic);
+
+			if (!firstPointSet) {
+			  Cesium.Cartographic.clone(tempCartographic, firstPoint);
+			  firstPointSet = true;
+			}
+			else {
+			  rectangleCoordinates.east = Math.max(tempCartographic.longitude, firstPoint.longitude);
+			  rectangleCoordinates.west = Math.min(tempCartographic.longitude, firstPoint.longitude);
+			  rectangleCoordinates.north = Math.max(tempCartographic.latitude, firstPoint.latitude);
+			  rectangleCoordinates.south = Math.min(tempCartographic.latitude, firstPoint.latitude);
+			  selector.show = true;
+			}
+		}
+	}, Cesium.ScreenSpaceEventType.MOUSE_MOVE, Cesium.KeyboardEventModifier.SHIFT);
+
+	var getSelectorLocation = new Cesium.CallbackProperty(function getSelectorLocation(time, result) {
+		return Cesium.Rectangle.clone(rectangleCoordinates, result);
+	}, false);
+
+	screenSpaceEventHandler.setInputAction(function startClickShift() {
+		mouseDown = true;
+		selector.rectangle.coordinates = getSelectorLocation;
+	}, Cesium.ScreenSpaceEventType.LEFT_DOWN, Cesium.KeyboardEventModifier.SHIFT);
+
+	screenSpaceEventHandler.setInputAction(function endClickShift() {
+		mouseDown = false;
+		firstPointSet = false;
+		selector.rectangle.coordinates = rectangleCoordinates;
+	}, Cesium.ScreenSpaceEventType.LEFT_UP, Cesium.KeyboardEventModifier.SHIFT);
+	
+	//Hide the selector by clicking anywhere
+	screenSpaceEventHandler.setInputAction(function hideSelector() {
+		selector.show = false;
+	}, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+	
+	selector = viewer.entities.add({
+		selectable: false,
+		show: false,
+		rectangle: {
+			fill : false,
+			outline : true,
+			outlineColor : Cesium.Color.WHITE,
+			outlineWidth : 4,
+			stRotation : Cesium.Math.toRadians(45),
+			coordinates: getSelectorLocation
+			//material: Cesium.Color.RED.withAlpha(0.5)
+		}
+	});
+	
+	//Get & Show Double Click
+	viewer.scene.canvas.addEventListener('dblclick', function (e) {
+		//var entity = viewer.entities.getById('alo');
+		var ellipsoid = viewer.scene.globe.ellipsoid;
+		// Mouse over the globe to see the cartographic position
+		var cartesian = viewer.camera.pickEllipsoid(new Cesium.Cartesian2(e.clientX,e.clientY), ellipsoid);
+
+		if (cartesian) {
+		    bAutoRotation = false;
+			var cartographic = ellipsoid.cartesianToCartographic(cartesian);
+			var longitudeString = Cesium.Math.toDegrees(cartographic.longitude).toFixed(5);
+			var latitudeString = Cesium.Math.toDegrees(cartographic.latitude).toFixed(5);
+			
+			//Add question Pin
+			var questionPin = viewer.entities.add({
+				name : 'Question mark',
+				position : Cesium.Cartesian3.fromDegrees(longitudeString, latitudeString),
+				billboard : {
+					image : pinBuilder.fromText('??', Cesium.Color.BLACK, 48).toDataURL(),
+					verticalOrigin : Cesium.VerticalOrigin.BOTTOM
+				}
+			});
+
+		} else {
+			//entity.label.show = false;
+		}
+	});
+	
+	function loadVector2(){
+		$.ajax({
+			url: "data/typhoon/test2.json",
+			dataType:"json",
+			success: function(jsonData){	
+					
+				console.log(jsonData);
+				// Do something with the JSON object
+				var L1 = jsonData["DATA2"]["L1"];
+				var num = L1.length;
+
+				for(var i=0;i<num;i=i+3*10){
+				  var entity = viewer.entities.add({
+						position : Cesium.Cartesian3.fromDegrees(L1[i], L1[i+1], L1[i+2]*20),
+						point : {
+							pixelSize : 5,
+							color :new Cesium.Color(255/255,255/255,255/255)
+						}
+					});
+				}
+				// Do something with the JSON object
+				var L2 = jsonData["DATA2"]["L2"];
+				var num = L2.length;
+
+				for(var i=0;i<num;i=i+3*10){
+				  var entity = viewer.entities.add({
+						position : Cesium.Cartesian3.fromDegrees(L2[i], L2[i+1], L2[i+2]*20),
+						point : {
+							pixelSize : 5,
+							color :new Cesium.Color(150/255,150/255,150/255)
+						}
+					});
+				}
+				// Do something with the JSON object
+				var L3 = jsonData["DATA2"]["L3"];
+				var num = L3.length;
+
+				for(var i=0;i<num;i=i+3*10){
+				  var entity = viewer.entities.add({
+						position : Cesium.Cartesian3.fromDegrees(L3[i], L3[i+1], L3[i+2]*20),
+						point : {
+							pixelSize : 5,
+							color :new Cesium.Color(120/255,120/255,120/255)
+						}
+					});
+				}
+				// Do something with the JSON object
+				var L4 = jsonData["DATA2"]["L4"];
+				var num = L4.length;
+
+				for(var i=0;i<num;i=i+3*10){
+				  var entity = viewer.entities.add({
+						position : Cesium.Cartesian3.fromDegrees(L4[i], L4[i+1], L4[i+2]*20),
+						point : {
+							pixelSize : 5,
+							color :new Cesium.Color(50/255,50/255,50/255)
+						}
+					});
+				}
+
+				entityArrowToros.push(entity);
+			
+				/*
+				//any JSON data formatted for WebGL Globe.
+				var dataSource = new WebGLGlobeDataSource();
+				dataSource.loadUrl('../../data/toros.json');
+
+				//viewer.clock.shouldAnimate = false;
+				viewer.dataSources.add(dataSource);*/
+				
+				viewer.flyTo(viewer.entities);
+			},
+			beforeSend:function(){
+				$('#loadingIMG').show();
+			},
+			complete:function(){
+				$('#loadingIMG').hide();
+			},
+			error: function(jsonData){
+				alert("error");
+			}
+		});
+	}
+
+	function loadVector(){
+		$.ajax({
+			url: "data/typhoon/test2.json",
+			dataType:"json",
+			success: function(jsonData){	
+					
+				console.log(jsonData);
+				// Do something with the JSON object
+				var L1 = jsonData["DATA2"]["L1"];
+				var num = L1.length;
+
+				for(var i=0;i<num;i=i+3*10){
+				  var entity = viewer.entities.add({
+						position : Cesium.Cartesian3.fromDegrees(L1[i], L1[i+1], L1[i+2]*20),
+						point : {
+							pixelSize : 5,
+							color :new Cesium.Color(220/255,0/255,0/255)
+						}
+					});
+				}
+				// Do something with the JSON object
+				var L2 = jsonData["DATA2"]["L2"];
+				var num = L2.length;
+
+				for(var i=0;i<num;i=i+3*10){
+				  var entity = viewer.entities.add({
+						position : Cesium.Cartesian3.fromDegrees(L2[i], L2[i+1], L2[i+2]*20),
+						point : {
+							pixelSize : 5,
+							color :new Cesium.Color(150/255,30/255,30/255)
+						}
+					});
+				}
+				// Do something with the JSON object
+				var L3 = jsonData["DATA2"]["L3"];
+				var num = L3.length;
+
+				for(var i=0;i<num;i=i+3*10){
+				  var entity = viewer.entities.add({
+						position : Cesium.Cartesian3.fromDegrees(L3[i], L3[i+1], L3[i+2]*20),
+						point : {
+							pixelSize : 5,
+							color :new Cesium.Color(150/255,150/255,0/255)
+						}
+					});
+				}
+				// Do something with the JSON object
+				var L4 = jsonData["DATA2"]["L4"];
+				var num = L4.length;
+
+				for(var i=0;i<num;i=i+3*10){
+				  var entity = viewer.entities.add({
+						position : Cesium.Cartesian3.fromDegrees(L4[i], L4[i+1], L4[i+2]*20),
+						point : {
+							pixelSize : 5,
+							color :new Cesium.Color(0/255,255/255,0/255)
+						}
+					});
+				}
+
+				entityArrowToros.push(entity);
+			
+				/*
+				//any JSON data formatted for WebGL Globe.
+				var dataSource = new WebGLGlobeDataSource();
+				dataSource.loadUrl('../../data/toros.json');
+
+				//viewer.clock.shouldAnimate = false;
+				viewer.dataSources.add(dataSource);*/
+				
+				viewer.flyTo(viewer.entities);
+			},
+			beforeSend:function(){
+				$('#loadingIMG').show();
+			},
+			complete:function(){
+				$('#loadingIMG').hide();
+			},
+			error: function(jsonData){
+				alert("error");
+			}
+		});
+	}
+	
+	function loadVector3(){
+		$.ajax({
+			url: "data/typhoon/typhoon.json",
+			dataType:"json",
+			success: function(jsonData){	
+					
+				console.log(jsonData);
+				// Do something with the JSON object
+				var LL = jsonData["lls"];
+				var num = LL.length;
+				var lon = LL[num-1][1];
+				var center = Cesium.Cartesian3.fromDegrees(0, 0);
+
+				//gPoints.modelMatrix = Cesium.Transforms.northUpEastToFixedFrame(center);
+				gPoints = viewer.scene.primitives.add(new Cesium.PointPrimitiveCollection());
+				var sbd = new Cesium.NearFarScalar(1, 4.0, 2000000, 1);
+				for(var i=0;i<num;i=i+10){
+				
+					gPoints.add({
+						position: new Cesium.Cartesian3.fromDegrees(LL[i][0],LL[i][1],LL[i][2]),
+						color: new Cesium.Color(255/255,0/255,0/255),
+						pixelSize: 2.0,
+						//scaleByDistance: sbd
+						//scaleByDistance : new Cesium.NearFarScalar(1.5e2, 15, 1.5e7, 0.0),
+                        //translucencyByDistance : new Cesium.NearFarScalar(1.5e2, 1.0, 1.5e7, 0.0)
+						//outlineColor: clrs[clr],
+						//outlineWidth: 0.0,
+						show: true
+					});
+			
+				}
+				//viewer.flyTo(viewer.primitives);
+				viewer.camera.flyTo({ 
+					destination: Cesium.Cartesian3.fromDegrees(123, 21.8, 1000000)
+				});
+			},
+			beforeSend:function(){
+				$('#loadingIMG').show();
+			},
+			complete:function(){
+				$('#loadingIMG').hide();
+			},
+			error: function(jsonData){
+				alert("error");
+			}
+		});
+		
+		$.ajax({
+			url: "data/typhoon/typhoon2.json",
+			dataType:"json",
+			success: function(jsonData){	
+					
+				console.log(jsonData);
+				// Do something with the JSON object
+				var LL = jsonData["lls"];
+				var num = LL.length;
+				var lon = LL[num-1][1];
+				var center = Cesium.Cartesian3.fromDegrees(0, 0);
+
+				//gPoints2.modelMatrix = Cesium.Transforms.northUpEastToFixedFrame(center);
+				gPoints2 = viewer.scene.primitives.add(new Cesium.PointPrimitiveCollection());
+				var sbd = new Cesium.NearFarScalar(1, 4.0, 2000000, 1);
+				for(var i=0;i<num;i=i+10){
+				
+					gPoints2.add({
+						position: new Cesium.Cartesian3.fromDegrees(LL[i][0],LL[i][1],LL[i][2]),
+						color: new Cesium.Color(0/255,0/255,200/255),
+						pixelSize: 2.0,
+						//scaleByDistance: sbd
+						//scaleByDistance : new Cesium.NearFarScalar(1.5e2, 15, 1.5e7, 0.0),
+                        //translucencyByDistance : new Cesium.NearFarScalar(1.5e2, 1.0, 1.5e7, 0.0)
+						//outlineColor: clrs[clr],
+						//outlineWidth: 0.0,
+						show: true
+					});
+			
+				}
+				//viewer.flyTo(viewer.primitives);
+				viewer.camera.flyTo({ 
+					destination: Cesium.Cartesian3.fromDegrees(123, 21.8, 1000000)
+				});
+			},
+			beforeSend:function(){
+				$('#loadingIMG').show();
+			},
+			complete:function(){
+				$('#loadingIMG').hide();
+			},
+			error: function(jsonData){
+				alert("error");
+			}
+		});
+		
+		$.ajax({
+			url: "data/typhoon/typhoon3.json",
+			dataType:"json",
+			success: function(jsonData){	
+					
+				console.log(jsonData);
+				// Do something with the JSON object
+				var LL = jsonData["lls"];
+				var num = LL.length;
+				var lon = LL[num-1][1];
+				var center = Cesium.Cartesian3.fromDegrees(0, 0);
+
+				//gPoints3.modelMatrix = Cesium.Transforms.northUpEastToFixedFrame(center);
+				gPoints3 = viewer.scene.primitives.add(new Cesium.PointPrimitiveCollection());
+				var sbd = new Cesium.NearFarScalar(1, 4.0, 2000000, 1);
+				for(var i=0;i<num;i=i+10){
+				
+					gPoints3.add({
+						position: new Cesium.Cartesian3.fromDegrees(LL[i][0],LL[i][1],LL[i][2]),
+						color: new Cesium.Color(0/255,200/255,0/255),
+						pixelSize: 2.0,
+						//scaleByDistance: sbd
+						//scaleByDistance : new Cesium.NearFarScalar(1.5e2, 15, 1.5e7, 0.0),
+                        //translucencyByDistance : new Cesium.NearFarScalar(1.5e2, 1.0, 1.5e7, 0.0)
+						//outlineColor: clrs[clr],
+						//outlineWidth: 0.0,
+						show: true
+					});
+			
+				}
+				//viewer.flyTo(viewer.primitives);
+				viewer.camera.flyTo({ 
+					destination: Cesium.Cartesian3.fromDegrees(123, 21.8, 1000000)
+				});
+			},
+			beforeSend:function(){
+				$('#loadingIMG').show();
+			},
+			complete:function(){
+				$('#loadingIMG').hide();
+			},
+			error: function(jsonData){
+				alert("error");
+			}
+		});
+	}
+	
+	/*
+	function loadImage(){
+		viewer.entities.add({
+			name: 'Rotating rectangle with rotating texture coordinate',
+			position : Cesium.Cartesian3.fromDegrees(120.0, 30.0),
+			rectangle: {
+				coordinates: Cesium.Rectangle.fromDegrees(120, 30.0, 130, 40.0),
+				material: new Cesium.ImageMaterialProperty({
+					image: 'img.png',
+					transparent: true
+					
+				}),
+				//rotation: new Cesium.CallbackProperty(getRotationValue, false),
+				//stRotation: new Cesium.CallbackProperty(getRotationValue, false)
+			}
+		});
+
+	}*/
+	
+	var czml = [{
+			"id" : "document",
+			"name" : "CZML Polygon - Intervals and Availability",
+			"version" : "1.0",
+			"clock": {
+				"interval": "2012-08-04T16:00:00Z/2012-08-04T17:00:00Z",
+				"currentTime": "2012-08-04T16:00:00Z",
+				"multiplier": 1000
+			}
+		}, 
+		{
+			"id":"Target",
+			"availability":"2012-08-04T16:00:00Z/2012-08-04T16:20:00Z",
+			
+			"rectangle":{
+				"height" : 10000,
+				"coordinates" : {
+						"wsenDegrees" : [110, 10.0, 140, 40.0]
+					},			
+				"material": {
+					"image" :{
+						"transparent":true,
+						"image" : "data/seqimg/path1.png"
+							
+					}
+					
+				}			
+			}
+
+		}
+		,{
+			"id":"Target2",
+			"availability":"2012-08-04T16:20:00Z/2012-08-04T16:30:00Z",
+			
+
+			"rectangle":{
+				"height" : 10000,
+				"coordinates" : {
+						"wsenDegrees" : [110, 10.0, 140, 40.0]
+					},		
+				"material": {
+
+					"image" :{
+						"transparent":true,
+						"image": "data/seqimg/path2.png"
+						
+					}
+				}			
+			}
+
+		}
+		,{
+			"id":"Target3",
+			"availability":"2012-08-04T16:30:00Z/2012-08-04T16:40:00Z",
+			
+
+			"rectangle":{
+				"height" : 10000,
+				"coordinates" : {
+						"wsenDegrees" : [110, 10.0, 140, 40.0]
+					},		
+				"material": {
+
+					"image" :{
+						"transparent":true,
+						"image": "data/seqimg/path3.png"
+						
+					}
+				}			
+			}
+
+		}
+		,{
+			"id":"Target4",
+			"availability":"2012-08-04T16:40:00Z/2012-08-04T16:50:00Z",
+			
+
+			"rectangle":{
+				"height" : 10000,
+				"coordinates" : {
+						"wsenDegrees" : [110, 10.0, 140, 40.0]
+					},		
+				"material": {
+
+					"image" :{
+						"transparent":true,
+						"image": "data/seqimg/path4.png"
+						
+					}
+				}			
+			}
+
+		}
+		,{
+			"id":"Target5",
+			"availability":"2012-08-04T16:50:00Z/2012-08-04T17:00:00Z",
+			
+
+			"rectangle":{
+				"height" : 10000,
+				"coordinates" : {
+						"wsenDegrees" : [110, 10.0, 140, 40.0]
+					},		
+				"material": {
+
+					"image" :{
+						"transparent":true,
+						"image": "data/seqimg/path5.png"
+						
+					}
+				}			
+			}
+
+		}
+			
+	];
+	function loadSequenceImage(){
+		var data = Cesium.CzmlDataSource.load(czml);
+		viewer.dataSources.add(data);
+        viewer.zoomTo(data);
+	}
+	function loadDeleteAll(){	
+		viewer.entities.removeAll();
+		viewer.dataSources.removeAll();
+		
+		// Use of _private variables is undocumented, subject to change without notice.
+		// Do not use this code in production.
+		/*
+		 Cesium.requestAnimationFrame(function() {
+			viewer.dataSourceDisplay.defaultDataSource._visualizers.reduce(function(a,b) {
+				return (a instanceof Cesium.ModelVisualizer) ? a : b; }
+			)._modelHash[entity.id].modelPrimitive.readyPromise.then(function() {
+				console.log('Your model has loaded.');
+			});
+		});*/		
+	}
+	function loadTorosJSON() {
+		Cesium.loadJson('data/toros/toros.json').then(function(jsonData) {
+		   
+			if (entityArrowToros.length != 0)
+				deleteToros();
+			
+			// Do something with the JSON object
+			var len = jsonData.length;
+			//draw flow
+			for (var i = 0; i < len; i++) {
+				var x,y;
+				var u,v;
+				x = jsonData[i].Longitude;
+				y = jsonData[i].Latitude;
+				u = jsonData[i].Ucomp;
+				v = jsonData[i].Vcomp;
+				V = jsonData[i].Velocity
+			
+				var arrowToros = viewer.entities.add({
+					name : 'Red straight arrow at height',
+					polyline : {
+						positions : Cesium.Cartesian3.fromDegreesArrayHeights([x, y, 10,
+																			   (x+u/300), (y+v/300), 10]),
+						width : 5,
+						followSurface : false,
+						//material : new Cesium.PolylineArrowMaterialProperty(new Cesium.Color(V/100,1-V/100,0,1))
+						material : new Cesium.PolylineArrowMaterialProperty(Cesium.Color.RED)
+					}
+				});
+				entityArrowToros.push(arrowToros);
+			}
+			/*
+			//any JSON data formatted for WebGL Globe.
+			var dataSource = new WebGLGlobeDataSource();
+			dataSource.loadUrl('../../data/toros.json');
+
+			//viewer.clock.shouldAnimate = false;
+			viewer.dataSources.add(dataSource);*/
+			
+			viewer.flyTo(viewer.entities);
+			
+		}).otherwise(function(error) {
+			// an error occurred
+		});
+	}
+
+	function loadWaterTemperature(){	
+	    //Loading URL image
+		imageLayerWaterTemperature = layers.addImageryProvider(new Cesium.SingleTileImageryProvider({
+			url: 'data/image/waterTemperature2.png'
+		}));
+		imageLayerWaterTemperature.alpha = 0.6;   
+		
+		//Show the colorbar
+		var canvas = document.getElementById('cv');
+		var context = canvas.getContext('2d');
+		var imageObj = new Image();
+		imageObj.onload = function() {
+			context.globalAlpha=0.6;
+			context.drawImage(imageObj, 0, 0);
+		};
+		imageObj.src = 'data/image/sst_colorbar.png';
+		
+		
+		/*
+		viewer.scene.primitives.add(new Cesium.Primitive({
+			//geometryInstances : instance,
+			appearance : new Cesium.EllipsoidSurfaceAppearance({
+			material : new Cesium.Material({
+					fabric : {
+						type : 'Water',
+						uniforms : {
+							specularMap: 'data/image/waterTemperature.png',
+							//normalMap: require.toUrl('data/image/waterTemperature.png'),
+							frequency: 10000.0,
+							animationSpeed: 0.01,
+							amplitude: 1.0
+						}
+					}
+				})
+			})
+		}));*/
+		
+	}
+	
+	function deleteWaterTemperature(){
+	    layers.remove(imageLayerWaterTemperature);
+		imageLayerWaterTemperature = null;
+	  
+		//Clear colorbar
+		var canvas = document.getElementById('cv');
+		var context = canvas.getContext('2d');
+		context.clearRect(0, 0, canvas.width, canvas.height);
+	}
+	
+	// Loading  Classing JSON File
+	function loadClassingJSON() {
+		//Draw Line
+		Cesium.loadJson('data/cruise/cruise.json').then(function(data) {
+
+			//////////////////////////////////////
+			if (entityLineClassing != null)
+				deleteLine();
+				//viewer.entities.remove(entityLineClassing);
+			
+			//console.log(d);
+			console.log(data);
+			//document.getElementById("message").innerHTML=message;
+			
+			//Add Line
+			var path = [];
+			var len = data.length;
+			
+			//var cook = {"type": "LineString", "coordinates": [[120,22]] };
+			
+			for (i=0;i<len;i=i+1 ){
+				//var c = [json[i].Latitude , json[i].Longitude];
+				//cook.coordinates.push(c);
+				
+				path.push(data[i].Longitude);
+				path.push(data[i].Latitude);	
+			}
+			
+			entityLineClassing = viewer.entities.add({
+				name : 'Red line on the surface',
+				polyline : {
+					positions : Cesium.Cartesian3.fromDegreesArray(path),
+					width : 1,
+					material : Cesium.Color.GREEN
+			}});
+
+			viewer.flyTo(entityLineClassing);
+			
+			//Set bounds of our simulation time
+			var start = new Cesium.JulianDate();
+			var stop = Cesium.JulianDate.addSeconds(start, data.length, new Cesium.JulianDate());
+			//Animation
+			var positions = new Cesium.SampledPositionProperty();
+			var positionsSmooth = new Cesium.SampledPositionProperty();
+			var path3D = [];
+			var len = data.length;
+			for (i=0;i<len;i++ ){
+				var time = new Cesium.JulianDate.addSeconds(start, i*1, new Cesium.JulianDate());
+				var position = new Cesium.Cartesian3.fromDegrees(data[i].Longitude,data[i].Latitude, 1);
+				positions.addSample(time, position);	
+				
+				//console.log(data[i].Longitude);
+				//Smooth
+				if (i<11 || i>len-10){
+					positionsSmooth.addSample(time, position);
+				}else{						
+					var count = 0;
+					var count2 = 0;
+					count = (parseFloat(data[i-10].Longitude)+parseFloat(data[i-9].Longitude)+parseFloat(data[i-8].Longitude)+parseFloat(data[i-7].Longitude)+parseFloat(data[i-6].Longitude)
+								+parseFloat(data[i-5].Longitude)+parseFloat(data[i-4].Longitude)+parseFloat(data[i-3].Longitude)+parseFloat(data[i-2].Longitude)+parseFloat(data[i-1].Longitude)
+								+parseFloat(data[i].Longitude)+parseFloat(data[i+1].Longitude)+parseFloat(data[i+2].Longitude)+parseFloat(data[i+3].Longitude)+parseFloat(data[i+4].Longitude)
+								+parseFloat(data[i+5].Longitude)+parseFloat(data[i+6].Longitude)+parseFloat(data[i+7].Longitude)+parseFloat(data[i+8].Longitude)+parseFloat(data[i+9].Longitude))/20;
+							
+					count2 = (parseFloat(data[i-10].Latitude)+parseFloat(data[i-9].Latitude)+parseFloat(data[i-8].Latitude)+parseFloat(data[i-7].Latitude)+parseFloat(data[i-6].Latitude)
+								+parseFloat(data[i-5].Latitude)+parseFloat(data[i-4].Latitude)+parseFloat(data[i-3].Latitude)+parseFloat(data[i-2].Latitude)+parseFloat(data[i-1].Latitude)
+								+parseFloat(data[i].Latitude)+parseFloat(data[i+1].Latitude)+parseFloat(data[i+2].Latitude)+parseFloat(data[i+3].Latitude)+parseFloat(data[i+4].Latitude)
+								+parseFloat(data[i+5].Latitude)+parseFloat(data[i+6].Latitude)+parseFloat(data[i+7].Latitude)+parseFloat(data[i+8].Latitude)+parseFloat(data[i+9].Latitude))/20;
+						
+					position = new Cesium.Cartesian3.fromDegrees(count,count2,10);
+					positionsSmooth.addSample(time, position);	
+				}		
+			}
+	
+			//Make sure viewer is at the desired time.
+			viewer.clock.startTime = start.clone();
+			viewer.clock.stopTime = stop.clone();
+			viewer.clock.currentTime = start.clone();
+			viewer.clock.clockRange = Cesium.ClockRange.LOOP_STOP; //Loop at the end
+			viewer.clock.multiplier = 1;
+			
+			//Set timeline to simulation bounds
+			//viewer.timeline.zoomTo(start, stop);
+							
+			//Actually create the entity
+			entityBoat = viewer.entities.add({
+				name: 'test',
+				//Set the entity availability to the same interval as the simulation time.
+				
+				availability : new Cesium.TimeIntervalCollection([new Cesium.TimeInterval({
+					start : start,
+					stop : stop
+					 
+				})]),
+				//Use our computed positions
+				position : positions,
+				//position : 
+					//Cesium.Cartesian3.fromDegrees(123.0744619, 20.0503706, 10),
+				
+				//Automatically compute orientation based on position movement.
+				orientation : new Cesium.VelocityOrientationProperty(positionsSmooth),
+				//Load the Cesium plane model to represent the entity
+				model : {
+					uri : "Apps/SampleData/models/CesiumAir/Cesium_Air.gltf",
+					scale : 100.0,
+					minimumPixelSize : 256
+				}
+				/*
+				//Show the path as a pink line sampled in 1 second increments.
+				path : {
+					resolution : 1,
+					material : new Cesium.PolylineGlowMaterialProperty({
+						glowPower : 0.1,
+						color : Cesium.Color.YELLOW
+					}),
+					width : 5
+				}*/
+			});
+
+		}).otherwise(function(error) {
+			// an error occurred
+		});
+	}
+	
+	function loadPM25(){
+		$.ajax({
+			url: "http://opendata.epa.gov.tw/ws/Data/REWIQA/?$orderby=SiteName&$skip=0&$top=1000&format=json",
+			dataType:"jsonp",
+			success: function(data){	
+				console.log(data.length);
+				console.log(site.length);
+				for(i=0;i<data.length;i++){
+					var key = data[i].SiteName;
+					for(j=0;j<site.length;j++){
+						//Match Site
+						if (key.match(site[j].SiteName)){
+							var lon = site[j].TWD97Lon;
+							var lat = site[j].TWD97Lat;
+							var pm25 = data[i]["PM2.5"];
+							//Set Color
+							var pmColor = Cesium.Color.fromCssColorString('#9cff9c');
+							if      ( 0<=pm25&&pm25<=11) pmColor = Cesium.Color.fromCssColorString('#9cff9c');
+							else if (12<=pm25&&pm25<=23) pmColor = Cesium.Color.fromCssColorString('#31ff00');
+							else if (24<=pm25&&pm25<=35) pmColor = Cesium.Color.fromCssColorString('#31cf00');
+							else if (36<=pm25&&pm25<=41) pmColor = Cesium.Color.fromCssColorString('#ffff00');
+							else if (42<=pm25&&pm25<=47) pmColor = Cesium.Color.fromCssColorString('#ffcf00');
+							else if (48<=pm25&&pm25<=53) pmColor = Cesium.Color.fromCssColorString('#ff9a00');
+							else if (54<=pm25&&pm25<=58) pmColor = Cesium.Color.fromCssColorString('#ff6464');
+							else if (59<=pm25&&pm25<=64) pmColor = Cesium.Color.fromCssColorString('#ff0000');
+							else if (65<=pm25&&pm25<=70) pmColor = Cesium.Color.fromCssColorString('#990000');
+							else if (71<=pm25          ) pmColor = Cesium.Color.fromCssColorString('#ce30ff');
+							//Add Billboard
+							var surfacePosition = Cesium.Cartesian3.fromDegrees(lon, lat, 0);
+							var heightPosition = Cesium.Cartesian3.fromDegrees(lon, lat, pm25 * 1000);
+							var polyline = new Cesium.PolylineGraphics();
+							polyline.material = new Cesium.ColorMaterialProperty(pmColor);
+							polyline.width = new Cesium.ConstantProperty(10);
+							polyline.followSurface = new Cesium.ConstantProperty(false);
+							polyline.positions = new Cesium.ConstantProperty([surfacePosition, heightPosition]);
+							
+							if (0<=pm25 && pm25<=120){
+								var entity = viewer.entities.add({
+									name : site[j].SiteName,						
+									description:  "<div style='background-color:#a0a0a0; padding:0px;'><table>"
+												  +"<tr><td>County</td><td>" + data[i].County + "</td></tr>"
+												  +"<tr><td>PM2.5</td><td>" + data[i]["PM2.5"] + "</td></tr>"
+												  +"<tr><td>PublishTime</td><td>" + data[i]["PublishTime"] + "</td></tr>"
+												  +"</table></div>",
+									position: Cesium.Cartesian3.fromDegrees(lon, lat,  pm25 * 500),  //the Height must be half of length
+									cylinder : {
+										length : pm25 * 1000,
+										topRadius : 2000.0,
+										bottomRadius : 2000.0,
+										material : pmColor
+									}
+									//position : Cesium.Cartesian3.fromDegrees(lon, lat),
+									//billboard : {
+									//	image : pinBuilder.fromColor(pmColor, 48).toDataURL(),
+									//	verticalOrigin : Cesium.VerticalOrigin.BOTTOM
+									//}
+									
+								});
+								entityPM25.push(entity);
+							}
+						}
+					}
+				}
+				viewer.flyTo(viewer.entities);
+			},
+			
+			error: function(data){
+				alert("error");
+			}
+		});
+	}
+	
+	//*****************************************
+	
+	
+	function test() {
+	viewer.scene.initializeFrame();
+	
+	
+		var scene = viewer.scene;
+		var primitives = scene.primitives;
+		var ellipsoid = viewer.scene.globe.ellipsoid;
+
+		var length = 1000.0;
+		var length = 1000.0;
+		var positionEllipsoid = ellipsoid.cartographicToCartesian(Cesium.Cartographic.fromDegrees(0, 0));
+
+		//Create Geometry
+		var coneGeometry = new Cesium.CylinderGeometry({
+			length: length,
+			topRadius: 0.0,
+			bottomRadius: 200000.0,
+			vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT
+		});
+
+
+		//Create Geometry Instance
+		var coneGeometryInstance = new Cesium.GeometryInstance({
+			id: 'RedCone',
+			geometry: coneGeometry,
+			attributes: {
+				color: Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.RED)
+			}
+		});
+
+
+		/*
+		//Add geometry to scene
+		var primitive;
+		primitives.add(primitive = new Cesium.Primitive({
+			geometryInstances: coneGeometryInstance,
+			appearance: new Cesium.PerInstanceColorAppearance({
+				closed: true,
+				translucent: false
+			})
+		}));*/
+
+		var counter = 900;
+		setInterval(function () {
+		
+			if (counter >= 360) {
+				counter = 0;
+			}
+			
+			var angleRad = 3.14 * counter / 180;
+			var rotMatrix = new Cesium.Matrix3.fromRotationZ(angleRad);
+			var modelMatrix = Cesium.Matrix4.multiply(
+				Cesium.Transforms.northUpEastToFixedFrame(new Cesium.Cartesian3(1, 1, 1)),
+				Cesium.Matrix4.fromRotationTranslation(rotMatrix, undefined),
+				new Cesium.Matrix4());
+			//primitive.modelMatrix = modelMatrix;
+			//gPoints.modelMatrix = modelMatrix;
+			//gPoints.debugShowBoundingVolume = true;
+	
+			//lon = lon + 0.01;
+			//lat = lat +0.1;
+			//alt = alt - 0.1;
+			
+			var bShow1 = false;
+			var bShow2 = false;
+			var bShow3 = false;
+			switch(counter % 3) {
+			case 0:
+				bShow1 = true;
+				break;
+			case 1:
+				bShow2 = true;
+				break;
+			case 2:
+				bShow3 = true;
+				break;
+			}
+			
+			var len = gPoints.length;
+			for (var i = 0; i < len; ++i) {
+			  var p = gPoints.get(i);
+			  p.show = bShow1;
+			}
+			
+			var len = gPoints2.length;
+			for (var i = 0; i < len; ++i) {
+			  var p = gPoints2.get(i);
+			  p.show = bShow2;
+			}
+			
+			var len = gPoints3.length;
+			for (var i = 0; i < len; ++i) {
+			  var p = gPoints3.get(i);
+			  p.show = bShow3;
+			}
+
+			counter += 1;
+
+		}, 1000);
+	}
+	  
+
+
+</script>
+</body>
+</html>

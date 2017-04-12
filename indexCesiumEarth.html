@@ -1072,7 +1072,7 @@
 		console.log(pickedObject.id);
 		if (Cesium.defined(pickedObject) && ((pickedObject.id == bluePin1) || (pickedObject.id == bluePin2)|| (pickedObject.id == bluePin3)|| (pickedObject.id == bluePin4)))
 		{
-			$( "#dialog" ).dialog({
+			$("#dialog" ).dialog({
 				  autoOpen: true,
 				  width: 600,
 				  height: 350,
@@ -1181,6 +1181,7 @@
 				}
 				viewer.flyTo(viewer.entities);
 			},
+			
 			error: function(data){
 				alert("error");
 			}
