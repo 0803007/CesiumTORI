@@ -930,6 +930,9 @@
 	function loadChlorophyll(){
 	    if (imageLayerWaterTemperature!=null)
 			deleteWaterTemperature();
+			
+		if (imageLayerChlorophyll!=null)
+			deleteChlorophyll();
 	
 	    //Loading select name
 	    var nameSelect = document.getElementById('chlorophyll').value;
@@ -962,6 +965,9 @@
 	function loadWaterTemperature(){
 		if (imageLayerChlorophyll!=null)
 			deleteChlorophyll();
+		
+		if (imageLayerWaterTemperature!=null)
+			deleteWaterTemperature();
 		
 		//Loading select name
 	    var nameSelect = document.getElementById('waterTemperature').value;
@@ -1198,6 +1204,7 @@
 			
 		entityPM25 = [];
 	}
+	
 </script>
 </body>
 </html>
