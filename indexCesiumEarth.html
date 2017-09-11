@@ -219,7 +219,8 @@
 	
 	//Init Cesium	
 	Cesium.BingMapsApi.defaultKey = "y10PwCCQ3kETfTfZrpia~WuBQuZSyqg3XTS3LFnjonw~AsJ0CEBEcA2bth5UvagyEvpWaC1Ww71fVt26OaFrWlS7ZSzrnkgBOUFmA1hVweMG";//license
-    var viewer = new Cesium.Viewer('cesiumContainer', { infoBox : true });
+    var viewer = new Cesium.Viewer('cesiumContainer', { infoBox : true,  vrButton : true });	
+	viewer.vrButton.viewModel.command();
 	var pinBuilder = new Cesium.PinBuilder();
 	var layers = viewer.scene.imageryLayers;
 	
