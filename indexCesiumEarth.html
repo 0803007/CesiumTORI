@@ -1,4 +1,5 @@
 <!DOCTYPE html> 
+
 <html lang="en">
 <head>
 	<link href="DB/Images/favicon.ico" rel="SHORTCUT ICON" id="css">
@@ -16,8 +17,10 @@
 	<script src="https://code.highcharts.com/highcharts.js"></script>
 	<script src="https://code.highcharts.com/modules/exporting.js"></script>
 	<script src="Build/Cesium/Cesium.js"></script>
+	
 	<script src="../js/WebGLGlobeDataSource.js"></script>
 	<script src="DB/Images/Site.js" charset="big5"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.2/dat.gui.min.js"></script>
 	<style>
 		@import url(Apps/Sandcastle/templates/bucket.css);
 		@import url(Build/Cesium/Widgets/widgets.css);
@@ -56,7 +59,9 @@
 			border: 1px solid #bdc3c7;
 			background-color: #fff; 
 		}
+		
 	</style>
+
 	<div class="loading-mask" id="loadingIMG" style="display:none"><span style="font-size:3em;">Loading .....</span></div>
 	<div id="cesiumContainer"></div>
 	<div id="mousePosition">Loading...</div>
@@ -219,8 +224,8 @@
 	
 	//Init Cesium	
 	Cesium.BingMapsApi.defaultKey = "y10PwCCQ3kETfTfZrpia~WuBQuZSyqg3XTS3LFnjonw~AsJ0CEBEcA2bth5UvagyEvpWaC1Ww71fVt26OaFrWlS7ZSzrnkgBOUFmA1hVweMG";//license
-    var viewer = new Cesium.Viewer('cesiumContainer', { infoBox : true,  vrButton : true });	
-	viewer.vrButton.viewModel.command();
+    var viewer = new Cesium.Viewer('cesiumContainer', { infoBox : true,  vrButton : false });	
+	//viewer.vrButton.viewModel.command();
 	var pinBuilder = new Cesium.PinBuilder();
 	var layers = viewer.scene.imageryLayers;
 	
@@ -1077,10 +1082,11 @@
 			verticalOrigin : Cesium.VerticalOrigin.BOTTOM
 		}
 	});
+		
 
 	screenSpaceEventHandler.setInputAction(function(movement) {
         var pickedObject = viewer.scene.pick(movement.position);
-		console.log(pickedObject.id);
+		
 		if (Cesium.defined(pickedObject) && ((pickedObject.id == bluePin1) || (pickedObject.id == bluePin2)|| (pickedObject.id == bluePin3)|| (pickedObject.id == bluePin4)))
 		{
 			$("#dialog" ).dialog({
