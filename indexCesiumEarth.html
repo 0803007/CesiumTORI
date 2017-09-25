@@ -28,10 +28,13 @@
 			width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;  
 		}
 		.toolbar-left {
+			font-size:16px;
 			display: block;
 			position: absolute;
-			top: 5px;
-			left: 5px;
+			top: 20px;
+			left: 20px;
+			background-color: #000;
+			opacity:0.6
 		}
 		.loading-mask {
 			display: block;
@@ -59,19 +62,45 @@
 			border: 1px solid #bdc3c7;
 			background-color: #fff; 
 		}
-		
+		.dialog
+		{
+			font-size:16px;
+			display: block;
+			position: absolute;
+			top: 20px;
+			left: 20px;
+			background-color: #000;
+			opacity:0.7;
+			-webkit-box-shadow:1px 1px 3px #292929;
+			-moz-box-shadow:1px 1px 3px #292929;
+			box-shadow:1px 1px 3px #292929;
+			margin:10px;
+				
+		}
+		.dialog-title
+		{
+			color:#fff;
+			background-color:#404040;
+			font-size:12pt;
+			font-weight:bold;
+			padding:4px 6px;
+			cursor:move;
+		}
 	</style>
 
 	<div class="loading-mask" id="loadingIMG" style="display:none"><span style="font-size:3em;">Loading .....</span></div>
 	<div id="cesiumContainer"></div>
 	<div id="mousePosition">Loading...</div>
 	<div class="toolbar-left">
-		<p id="textPosition">世界座標</p> 
-		<input type="checkbox" id="cbox1" value="second_checkbox" onchange="showRotation(this.checked)" checked = "true"> <label>Rotation</label>  
-		<input type="checkbox" id="cbox2" value="second_checkbox" onchange="showLogo(this.checked)" checked = "true"> <label>Logo</label>  
-		<input type="checkbox" id="cbox3" value="second_checkbox" onchange="showTerrain(this.checked)" > <label>Terrain</label> 
-		<input type="checkbox" id="cbox4" value="second_checkbox" onchange="showLight(this.checked)" checked = "true"> <label>Sun</label> 
-		<input type="checkbox" id="cbox5" value="second_checkbox" onchange="showTOROSStation(this.checked)" checked = "true" > <label>TOROS Station</label><br>
+		<a href="http://www.tori.org.tw/"><img id="logo1" src="DB/Images/foot_logo.png"></a>
+		<a href="http://www.tori.org.tw/"><img id="logo2" src="DB/Images/LOGO.png"></a>
+		<p id="textPosition">World Coordinate<br><br><br> </p> 
+		<input type="checkbox" id="cbox1" value="second_checkbox" onchange="showRotation(this.checked)" checked = "true"> <label>Rotation</label><br>  
+		<input type="checkbox" id="cbox2" value="second_checkbox" onchange="showLogo(this.checked)" checked = "true"> <label>Logo</label><br>  
+		<input type="checkbox" id="cbox3" value="second_checkbox" onchange="showTerrain(this.checked)" > <label>Terrain</label><br>
+		<input type="checkbox" id="cbox4" value="second_checkbox" onchange="showLight(this.checked)" checked = "true"> <label>Sun</label><br> 
+		<input type="checkbox" id="cbox5" value="second_checkbox" onchange="showTOROSStation(this.checked)" checked = "false" > <label>TOROS Station</label><br>
+		<input type="checkbox" id="cbox6" value="second_checkbox" onchange="showAllStation(this.checked)" > <label>All Station</label><br>
 		<select id="typing" onchange="showTyping(this.value)">
 			<option>請選擇船種</option>
 			<option>RR</option>
@@ -151,11 +180,10 @@
 		<canvas width="380" height="55" id="cv"></canvas><br>
 	</div>
 
-	<div class="logo">
-		<!-- <canvas width="380" height="55" id="logo"></canvas> --> 
+	<!-- <div class="logo">
 		<a href="http://www.tori.org.tw/"><img id="logo1" src="DB/Images/foot_logo.png"></a>
 		<a href="http://www.tori.org.tw/"><img id="logo2" src="DB/Images/LOGO.png"></a>
-	</div>
+	</div>-->
 	<div id="dialog" title="Basic dialog" >
 	    Date:<input type="text" id="datepicker">
 		Select a speed:
@@ -196,6 +224,7 @@
 	};*/
 
 	// Global Var
+	var rot = 0.0;
 	var block = null;
 	var entityLineClassing = null;
 	var entityBoat = null
@@ -210,6 +239,7 @@
 	var bluePin2 = null;
 	var bluePin3 = null;
 	var bluePin4 = null;
+	var sitePin = [];
 	var posWeather = "NAWN";
    
 	/*var widget = new Cesium.CesiumWidget('cesiumContainer');
@@ -286,8 +316,8 @@
 			document.getElementsByClassName("cesium-widget-credits")[0].style = "display:visible";
 								
 		}else{
-			document.getElementById('logo1').style = "display:none";
-			document.getElementById('logo2').style = "display:none";
+			document.getElementById('logo1').style = "visibility:hidden";
+			document.getElementById('logo2').style = "visibility:hidden";
 			
 			document.getElementsByClassName("cesium-widget-credits")[0].style = "display:none";
 		}
@@ -324,6 +354,62 @@
 		}
 	}
 	
+	function showAllStation(check){
+		if (check ){
+			$.ajax({
+			url: "DB/AllStation/getAllSiteINFO.php",
+			type:"POST",
+			dataType:"JSON",
+
+			success: function(data){
+				var len = data.length;		
+				for (i=0;i<len;i=i+1 ){
+					var lon = data[i].lon;
+					var lat = data[i].lat;	
+					
+					//Add question Pin
+					sitePin[i]  = viewer.entities.add({
+						name : data[i].siteName,
+						position : Cesium.Cartesian3.fromDegrees(lon, lat),
+						description:  "<div style='background-color:#a0a0a0; padding:0px;'><table>"
+												  +"<tr><td>siteID</td><td>" + data[i].siteID+ "</td></tr>"
+												  +"<tr><td>siteName</td><td>" + data[i].siteName + "</td></tr>"
+												  +"<tr><td>siteEName</td><td>" + data[i].siteEName + "</td></tr>"
+												  +"<tr><td>type</td><td>" + data[i].type + "</td></tr>"
+												  +"<tr><td>lon</td><td>" + data[i].lon + "</td></tr>"
+												  +"<tr><td>lat</td><td>" + data[i].lat + "</td></tr>"
+												  +"<tr><td>altitude</td><td>" + data[i].altitude + "</td></tr>"
+												  +"<tr><td>status</td><td>" + data[i].status + "</td></tr>"
+												  +"<tr><td>startDate</td><td>" + data[i].startDate + "</td></tr>"
+												  +"<tr><td>endDate</td><td>" + data[i].endDate + "</td></tr>"
+												  +"<tr><td>description</td><td>" + data[i].description + "</td></tr>"
+												  +"<tr><td>edescription</td><td>" + data[i].edescription + "</td></tr>"
+												  +"<tr><td>location</td><td>" + data[i].location + "</td></tr>"
+												  +"<tr><td>remark</td><td>" + data[i].remark + "</td></tr>"
+												  +"<tr><td>updateDate</td><td>" + data[i].updateDate + "</td></tr>"
+												  +"</table></div>",
+						billboard : {
+							image : pinBuilder.fromColor(Cesium.Color.CHARTREUSE, 36).toDataURL(),
+							verticalOrigin : Cesium.VerticalOrigin.BOTTOM
+						}
+					});
+				}
+
+			},
+
+			error:   function(jqXHR, textStatus, errorThrown){ 
+				alert("這個月沒有資料");
+				console.log("error");
+			}
+		});
+		}else{
+			var len = sitePin.length;	
+			for (i=0;i<len;i++){
+				viewer.entities.remove(sitePin[i]);
+			}
+		}
+	}
+	
 	//Get & Show Mouse Position
 	viewer.scene.canvas.addEventListener('mousemove', function (e) {
 		//var entity = viewer.entities.getById('alo');
@@ -337,7 +423,7 @@
 			var longitudeString = Cesium.Math.toDegrees(cartographic.longitude).toFixed(5);
 			var latitudeString = Cesium.Math.toDegrees(cartographic.latitude).toFixed(5);
 			
-			document.getElementById("textPosition").innerHTML = "Longitude:" + longitudeString  + " , Latitude:" + latitudeString;
+			document.getElementById("textPosition").innerHTML = "Longitude:" + longitudeString  + " <p>Latitude:      " + latitudeString;
 			//entity.position = cartesian;
 			//entity.label.show = true;
 			//entity.label.text = '(' + longitudeString + ', ' + latitudeString + ')';
@@ -1044,11 +1130,12 @@
 		 image: image
 		}
 	});*/
+	
 
-	//Weather Station
+	//TOROS Station
 	bluePin1 = viewer.entities.add({
 	    name : 'DATN',
-		description : '大潭',
+		description : '大潭',		
 		position : Cesium.Cartesian3.fromDegrees(121.050035, 25.029934),
 		billboard : {
 			image : pinBuilder.fromColor(Cesium.Color.ROYALBLUE, 48).toDataURL(),
@@ -1082,7 +1169,6 @@
 			verticalOrigin : Cesium.VerticalOrigin.BOTTOM
 		}
 	});
-		
 
 	screenSpaceEventHandler.setInputAction(function(movement) {
         var pickedObject = viewer.scene.pick(movement.position);
