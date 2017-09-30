@@ -75,7 +75,7 @@
 			-moz-box-shadow:1px 1px 3px #292929;
 			box-shadow:1px 1px 3px #292929;
 			margin:10px;
-				
+			
 		}
 		.dialog-title
 		{
@@ -86,6 +86,11 @@
 			padding:4px 6px;
 			cursor:move;
 		}
+		.dialog2{
+			background-color: #000;
+			opacity:0.7;
+		}
+		
 	</style>
 
 	<div class="loading-mask" id="loadingIMG" style="display:none"><span style="font-size:3em;">Loading .....</span></div>
@@ -184,9 +189,11 @@
 		<a href="http://www.tori.org.tw/"><img id="logo1" src="DB/Images/foot_logo.png"></a>
 		<a href="http://www.tori.org.tw/"><img id="logo2" src="DB/Images/LOGO.png"></a>
 	</div>-->
-	<div id="dialog" title="Basic dialog" >
-	    Date:<input type="text" id="datepicker">
-		Select a speed:
+	
+	<div id="dialog" title="Dialog" class="dialog2">
+	    <Text style="font-size:18px" >From Date:</Text><input type="text" id="datepickerFrom"><br>
+		<Text style="font-size:18px" >To     Date:</Text><input type="text" id="datepickerTo"><br>
+		<Text style="font-size:18px" >Select a speed:</Text>
 		<select name="speed" id="selectWeather">		
 			<option selected="selected">Temperature</option>
 			<option>Humidity</option>
@@ -199,6 +206,27 @@
 	<!-- <div id="container" style="min-width: 610px; height: 800px; margin: 0 auto"></div> -->
 </head>
 <body>
+
+<script type="text/javascript">
+    var isIE = navigator.userAgent.search("MSIE") > -1;
+    var isIE7 = navigator.userAgent.search("MSIE 7") > -1;
+    var isFirefox = navigator.userAgent.search("Firefox") > -1;
+    var isOpera = navigator.userAgent.search("Opera") > -1;
+    var isSafari = navigator.userAgent.search("Safari") > -1;//Google瀏覽器是用這核心
+    if (isIE7) {
+        alert('建議使用Firefox或是Chrome');
+    }
+    if (isIE) {
+        alert('建議使用Firefox或是Chrome');
+    }
+    if (isOpera) {
+        alert('建議使用Firefox或是Chrome');
+    }
+	 if (isSafari) {
+        alert('建議使用Firefox或是Chrome');
+    }
+
+</script>
 
 <script>
     /*
@@ -774,11 +802,14 @@
 	
 	}
 	$(function() {
-			$( "#datepicker" ).datepicker({ dateFormat: 'yymm',defaultDate: new Date(2016, 10, 1)});
+			$( "#datepickerFrom" ).datepicker({ dateFormat: 'yymm',defaultDate: new Date(2016, 10, 1)});
+	});
+	$(function() {
+			$( "#datepickerTo" ).datepicker({ dateFormat: 'yymm',defaultDate: new Date(2016, 10, 1)});
 	});
 	function showWeatherFromSQL(){		
 		var weather = document.getElementById('selectWeather').value;
-		var date = document.getElementById('datepicker').value;
+		var date = document.getElementById('datepickerTo').value;
 		var pos = posWeather;
 		console.log(weather);
 		console.log(date);
@@ -1215,7 +1246,7 @@
 			});
 		}
 
-		console.log(pickedObject.id._name);
+		//0console.log(pickedObject.id._name);
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
 	
