@@ -157,25 +157,25 @@
 		<button onclick="deleteToros()">刪除TOROS</button><br>
 		<select id="chlorophyll" >
 			<option>請選擇時間</option>
+			<option>2017年3月~2017年5月</option>
 			<option>2016年12月~2017年2月</option>
 			<option>2016年9月~2016年11月</option>
 			<option>2016年6月~2016年8月</option>
 			<option>2016年3月~2016年5月</option>
-			<option>2015年12月~2016月2月</option>
-			<option>2015年9月~2015月11月</option>
-			<option>2015年12月~2016月2月</option>
+			<option>2015年12月~2016年2月</option>
+			<option>2015年9月~2015年11月</option>
 		</select>
 		<button onclick="loadChlorophyll()">讀取葉綠素</button>
 		<button onclick="deleteChlorophyll()">刪除葉綠素</button><br>
 		<select id="waterTemperature">
 			<option>請選擇時間</option>
+			<option>2017年3月~2017年5月</option>
 			<option>2016年12月~2017年2月</option>
 			<option>2016年9月~2016年11月</option>
 			<option>2016年6月~2016年8月</option>
 			<option>2016年3月~2016年5月</option>
-			<option>2015年12月~2016月2月</option>
-			<option>2015年9月~2015月11月</option>
-			<option>2015年12月~2016月2月</option>
+			<option>2015年12月~2016年2月</option>
+			<option>2015年9月~2015年11月</option>		
 		</select>
 		<button onclick="loadWaterTemperature()">讀取水溫</button>
 		<button onclick="deleteWaterTemperature()">刪除水溫</button><br>
@@ -579,53 +579,53 @@
     //console.log(logoBillboed);
 	function showTorosDateFromSQL(){
 		$.ajax({
-				url: "DB/TOROS/getDate.php",
-				data: "month=" + document.getElementById('torosMonth').value,
-				type:"POST",
-				dataType:"JSON",
+			url: "DB/TOROS/getDate.php",
+			data: "month=" + document.getElementById('torosMonth').value,
+			type:"POST",
+			dataType:"JSON",
 
-				success: function(data){
-				    // Clear option
-					torosDate.options.length = 1;
-					//Add soption
-					var len = data.length;
-					console.log(data[0]);
-					
-					for (i=0;i<len;i=i+1 ){
-						torosDate.options[i+1] = new Option(data[i],data[i]);
-					}
-				},
-
-				error:   function(jqXHR, textStatus, errorThrown){ 
-					//document.getElementById("message").innerHTML=errorThrown; 
+			success: function(data){
+				// Clear option
+				torosDate.options.length = 1;
+				//Add soption
+				var len = data.length;
+				console.log(data[0]);
+				
+				for (i=0;i<len;i=i+1 ){
+					torosDate.options[i+1] = new Option(data[i],data[i]);
 				}
-			});
+			},
+
+			error:   function(jqXHR, textStatus, errorThrown){ 
+				//document.getElementById("message").innerHTML=errorThrown; 
+			}
+		});
 	}	
 
 	function showTyping(str){
 		$.ajax({
-				url: "DB/CruiseDB/getClassing.php",
-				data: "&tname="+str,
-				type:"POST",
-				dataType:"JSON",
+			url: "DB/CruiseDB/getClassing.php",
+			data: "&tname="+str,
+			type:"POST",
+			dataType:"JSON",
 
-				success: function(data){
-				    // Clear option
-					claassing.options.length = 1;
-					//Add soption
-					var len = data.length;
-					console.log(str);
-					console.log(data[0]);
-					
-					for (i=0;i<len;i=i+1 ){
-						claassing.options[i+1] = new Option(data[i],data[i]);
-					}
-				},
-
-				error:   function(jqXHR, textStatus, errorThrown){ 
-					document.getElementById("message").innerHTML=errorThrown; 
+			success: function(data){
+				// Clear option
+				claassing.options.length = 1;
+				//Add soption
+				var len = data.length;
+				console.log(str);
+				console.log(data[0]);
+				
+				for (i=0;i<len;i=i+1 ){
+					claassing.options[i+1] = new Option(data[i],data[i]);
 				}
-			});
+			},
+
+			error:   function(jqXHR, textStatus, errorThrown){ 
+				document.getElementById("message").innerHTML=errorThrown; 
+			}
+		});
 	}
 	function showClassingFromSQL(str){
 		//console.log(str);
@@ -802,10 +802,10 @@
 	
 	}
 	$(function() {
-			$( "#datepickerFrom" ).datepicker({ dateFormat: 'yymm',defaultDate: new Date(2016, 10, 1)});
+		$( "#datepickerFrom" ).datepicker({ dateFormat: 'yymm',defaultDate: new Date(2016, 10, 1)});
 	});
 	$(function() {
-			$( "#datepickerTo" ).datepicker({ dateFormat: 'yymm',defaultDate: new Date(2016, 10, 1)});
+		$( "#datepickerTo" ).datepicker({ dateFormat: 'yymm',defaultDate: new Date(2016, 10, 1)});
 	});
 	function showWeatherFromSQL(){		
 		var weather = document.getElementById('selectWeather').value;
