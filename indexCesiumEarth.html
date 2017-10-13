@@ -191,8 +191,7 @@
 	</div>-->
 	
 	<div id="dialog" title="Dialog" class="dialog2">
-	    <Text style="font-size:18px" >From Date:</Text><input type="text" id="datepickerFrom"><br>
-		<Text style="font-size:18px" >To     Date:</Text><input type="text" id="datepickerTo"><br>
+
 		<Text style="font-size:18px" >Select a speed:</Text>
 		<select name="speed" id="selectWeather">		
 			<option selected="selected">Temperature</option>
@@ -200,6 +199,8 @@
 			<option>Pressure</option>
 		</select>
 		<button class="ui-button ui-widget ui-corner-all" onclick="showWeatherFromSQL()">Set</button><br>
+		<Text style="font-size:18px" >From Date:</Text><input type="text" id="datepickerFrom"><br>
+		<Text style="font-size:18px" >To Date:</Text><input type="text" id="datepickerTo"><br>
 		<div id="highcharts" title="Basic dialog"><br>
 		<p>This is the default dialog which is useful for displaying information. The dialog window can be moved, resized and closed with the 'x' icon.</p>
 	</div>
@@ -222,7 +223,7 @@
     if (isOpera) {
         alert('建議使用Firefox或是Chrome');
     }
-	 if (isSafari) {
+	if (isSafari) {
         alert('建議使用Firefox或是Chrome');
     }
 
