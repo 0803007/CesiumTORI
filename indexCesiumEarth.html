@@ -11,7 +11,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
 	<title>ToriMIS</title>
 	<script src="../js/d3.min.js"></script>
-	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 	<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>  <!--這包很大,未來要下載回來  -->
 	<!-- <script src="../../js/ajax_select.js" type="text/javascript" ></script> -->
 	<script src="https://code.highcharts.com/highcharts.js"></script>
@@ -482,15 +482,15 @@
 			var tempCartographic = Cesium.Cartographic.fromCartesian(cartesian, Cesium.Ellipsoid.WGS84, tempCartographic);
 
 			if (!firstPointSet) {
-			  Cesium.Cartographic.clone(tempCartographic, firstPoint);
-			  firstPointSet = true;
+				Cesium.Cartographic.clone(tempCartographic, firstPoint);
+				firstPointSet = true;
 			}
 			else {
-			  rectangleCoordinates.east = Math.max(tempCartographic.longitude, firstPoint.longitude);
-			  rectangleCoordinates.west = Math.min(tempCartographic.longitude, firstPoint.longitude);
-			  rectangleCoordinates.north = Math.max(tempCartographic.latitude, firstPoint.latitude);
-			  rectangleCoordinates.south = Math.min(tempCartographic.latitude, firstPoint.latitude);
-			  selector.show = true;
+				rectangleCoordinates.east = Math.max(tempCartographic.longitude, firstPoint.longitude);
+				rectangleCoordinates.west = Math.min(tempCartographic.longitude, firstPoint.longitude);
+				rectangleCoordinates.north = Math.max(tempCartographic.latitude, firstPoint.latitude);
+				rectangleCoordinates.south = Math.min(tempCartographic.latitude, firstPoint.latitude);
+				selector.show = true;
 			}
 		}
 	}, Cesium.ScreenSpaceEventType.MOUSE_MOVE, Cesium.KeyboardEventModifier.SHIFT);
@@ -623,7 +623,7 @@
 				}
 			},
 
-			error:   function(jqXHR, textStatus, errorThrown){ 
+			error: function(jqXHR, textStatus, errorThrown){ 
 				document.getElementById("message").innerHTML=errorThrown; 
 			}
 		});
@@ -1254,12 +1254,15 @@
 	
 	function loadPM25(){
 		$.ajax({
-			url: "http://opendata.epa.gov.tw/ws/Data/REWIQA/?$orderby=SiteName&$skip=0&$top=1000&format=json",
+			type:"post",
+			url: "https://json2jsonp.com/?url=http://opendata2.epa.gov.tw/AQI.json",   //server端關掉跨站request,須第三方界接->json2jsonp
 			dataType:"jsonp",
+			
 			success: function(data){	
 			
-				//console.log(data.length);
-				//console.log(site.length);
+				console.log(data.length);
+				console.log(site.length);
+				
 				for(i=0;i<data.length;i++){
 					var key = data[i].SiteName;
 					for(j=0;j<site.length;j++){
@@ -1297,7 +1300,7 @@
 												  +"<tr><td>PM2.5</td><td>" + data[i]["PM2.5"] + "</td></tr>"
 												  +"<tr><td>PublishTime</td><td>" + data[i]["PublishTime"] + "</td></tr>"
 												  +"</table></div>",
-									position: Cesium.Cartesian3.fromDegrees(lon, lat,  pm25 * 500),  //the Height must be half of length
+									position: Cesium.Cartesian3.fromDegrees(lon, lat, pm25 * 500),  //the Height must be half of length
 									cylinder : {
 										length : pm25 * 1000,
 										topRadius : 2000.0,
@@ -1317,6 +1320,12 @@
 					}
 				}
 				viewer.flyTo(viewer.entities);
+			},
+			beforeSend:function(){
+				$('#loadingIMG').show();
+			},
+			complete:function(){
+				$('#loadingIMG').hide();
 			},
 			
 			error: function(data){
