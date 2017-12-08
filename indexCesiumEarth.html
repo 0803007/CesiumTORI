@@ -203,7 +203,8 @@
 		<Text style="font-size:18px" >To Date:</Text><input type="text" id="datepickerTo"><br>
 		<div id="highcharts" title="Basic dialog"><br>
 		<p>This is the default dialog which is useful for displaying information. The dialog window can be moved, resized and closed with the 'x' icon.</p>
-	</div>
+        </div>
+    </div>
 	<!-- <div id="container" style="min-width: 610px; height: 800px; margin: 0 auto"></div> -->
 </head>
 <body>
@@ -283,7 +284,7 @@
 	
 	//Init Cesium	
 	Cesium.BingMapsApi.defaultKey = "y10PwCCQ3kETfTfZrpia~WuBQuZSyqg3XTS3LFnjonw~AsJ0CEBEcA2bth5UvagyEvpWaC1Ww71fVt26OaFrWlS7ZSzrnkgBOUFmA1hVweMG";//license
-    var viewer = new Cesium.Viewer('cesiumContainer', { infoBox : true,  vrButton : false });	
+    var viewer = new Cesium.Viewer('cesiumContainer', { infoBox : true,  vrButton : true });	
 	//viewer.vrButton.viewModel.command();
 	var pinBuilder = new Cesium.PinBuilder();
 	var layers = viewer.scene.imageryLayers;
